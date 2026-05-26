@@ -84,24 +84,24 @@
   font-weight: 500;
 }
 
-a.primary {
+.primary {
   background: var(--text-primary);
   color: var(--background);
   gap: 8px;
 }
 
-a.secondary {
+.secondary {
   border-color: var(--button-secondary-border);
 }
 
 /* Enable hover only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
+  .primary:hover {
     background: var(--button-primary-hover);
     border-color: transparent;
   }
 
-  a.secondary:hover {
+  .secondary:hover {
     background: var(--button-secondary-hover);
     border-color: transparent;
   }
@@ -189,7 +189,7 @@ a.secondary {
   color: var(--theme-muted);
 }
 
-button,
+.page button,
 .cardHeader a,
 .channel,
 .primary,
@@ -199,7 +199,7 @@ button,
   transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
 }
 
-button:hover,
+.page button:hover,
 .cardHeader a:hover,
 .channel:hover,
 .primary:hover,
@@ -271,13 +271,13 @@ button:hover,
   font-weight: 850;
 }
 
-a.primary {
+.primary {
   background: linear-gradient(135deg, var(--bp-pink), var(--bp-aqua));
   color: #2b1025;
   box-shadow: 0 18px 42px rgba(255, 123, 199, 0.24);
 }
 
-a.secondary {
+.secondary {
   border-color: var(--theme-border);
   background: color-mix(in srgb, var(--theme-surface-strong) 72%, transparent);
   color: var(--theme-text);

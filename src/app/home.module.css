@@ -225,7 +225,7 @@
   color: var(--theme-muted);
 }
 
-button,
+.page button,
 .cardHeader a,
 .channel,
 .primary,
@@ -235,7 +235,7 @@ button,
   transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
 }
 
-button:hover,
+.page button:hover,
 .cardHeader a:hover,
 .channel:hover,
 .primary:hover,
