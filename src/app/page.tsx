@@ -17,15 +17,47 @@ type Channel = {
   name: string;
 };
 
+type UnreadMap = Record<string, number | { count?: number }>;
+
+function normalizeUnreadCount(value: UnreadMap[string] | undefined) {
+  if (typeof value === "number") return value;
+  if (value && typeof value.count === "number") return value.count;
+  return 0;
+}
+
+function readUnreadMap() {
+  const possibleKeys = [
+    "bubbles-unreads",
+    "bubbles:unreads",
+    "bubblesUnreadCounts",
+  ];
+
+  for (const key of possibleKeys) {
+    const cached = window.localStorage.getItem(key);
+
+    if (!cached) continue;
+
+    try {
+      const parsed = JSON.parse(cached);
+
+      if (parsed && typeof parsed === "object") {
+        return parsed as UnreadMap;
+      }
+    } catch {
+      window.localStorage.removeItem(key);
+    }
+  }
+
+  return {};
+}
+
 export default function HomePage() {
   const supabase = useMemo(() => createClient(), []);
 
   const [currentUserId, setCurrentUserId] = useState("");
   const [servers, setServers] = useState<Server[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [newChannelNames, setNewChannelNames] = useState<Record<string, string>>(
-    {}
-  );
+  const [unreadByChannelId, setUnreadByChannelId] = useState<UnreadMap>({});
   const [status, setStatus] = useState("Loading...");
 
   useEffect(() => {
@@ -41,6 +73,7 @@ export default function HomePage() {
       }
 
       setCurrentUserId(user.id);
+      setUnreadByChannelId(readUnreadMap());
 
       const { data: memberships, error: membershipError } = await supabase
         .from("server_members")
@@ -84,12 +117,30 @@ export default function HomePage() {
         return;
       }
 
+      const nextChannels = channelData ?? [];
+
       setServers(serverData ?? []);
-      setChannels(channelData ?? []);
+      setChannels(nextChannels);
+      window.sessionStorage.setItem(
+        "bubbles-channels",
+        JSON.stringify(nextChannels)
+      );
       setStatus("");
     }
 
     loadDashboard();
+
+    function syncUnreadCounts() {
+      setUnreadByChannelId(readUnreadMap());
+    }
+
+    window.addEventListener("storage", syncUnreadCounts);
+    window.addEventListener("focus", syncUnreadCounts);
+
+    return () => {
+      window.removeEventListener("storage", syncUnreadCounts);
+      window.removeEventListener("focus", syncUnreadCounts);
+    };
   }, [supabase]);
 
   async function logout() {
@@ -130,61 +181,52 @@ export default function HomePage() {
     }
   }
 
-  async function createChannel(event: React.FormEvent, serverId: string) {
-    event.preventDefault();
-
-    const rawName = newChannelNames[serverId]?.trim();
-
-    if (!rawName) return;
-
-    const cleanName = rawName
-      .replace(/^#+/, "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .slice(0, 32);
-
-    if (!cleanName) return;
-
-    setStatus("");
-
-    const { data: channel, error } = await supabase
-      .from("channels")
-      .insert({
-        server_id: serverId,
-        name: cleanName,
-      })
-      .select("id, server_id, name")
-      .single();
-
-    if (error) {
-      setStatus(error.message);
-      return;
-    }
-
-    if (channel) {
-      setChannels((current) => [...current, channel]);
-      setNewChannelNames((current) => ({
-        ...current,
-        [serverId]: "",
-      }));
-    }
+  function getServerChannels(serverId: string) {
+    return channels.filter((channel) => channel.server_id === serverId);
   }
+
+  function getServerUnreadCount(serverId: string) {
+    return getServerChannels(serverId).reduce((total, channel) => {
+      return total + normalizeUnreadCount(unreadByChannelId[channel.id]);
+    }, 0);
+  }
+
+  function getFirstChannel(serverId: string) {
+    return getServerChannels(serverId)[0] ?? null;
+  }
+
+  const totalUnreadCount = servers.reduce((total, server) => {
+    return total + getServerUnreadCount(server.id);
+  }, 0);
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
         <div>
-          <h1>Friend Chat</h1>
-          <p>Your private servers and channels.</p>
+          <h1>Bubbles</h1>
+          <p>
+            {totalUnreadCount > 0
+              ? `${totalUnreadCount} unread notification${
+                  totalUnreadCount === 1 ? "" : "s"
+                }`
+              : "Your private servers"}
+          </p>
         </div>
 
-        <button onClick={logout}>Logout</button>
+        <button type="button" onClick={logout}>
+          Logout
+        </button>
       </header>
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2>Your servers</h2>
+          <div>
+            <h2>Your servers</h2>
+            <p className={styles.cardSubtext}>
+              Pick a server to enter your first channel.
+            </p>
+          </div>
+
           <Link href="/setup">Create server</Link>
         </div>
 
@@ -192,67 +234,79 @@ export default function HomePage() {
 
         <div className={styles.serverList}>
           {servers.map((server) => {
-            const serverChannels = channels.filter(
-              (channel) => channel.server_id === server.id
-            );
-
+            const firstChannel = getFirstChannel(server.id);
             const isOwner = server.owner_id === currentUserId;
+            const unreadCount = getServerUnreadCount(server.id);
 
             return (
               <section className={styles.server} key={server.id}>
-                <div className={styles.serverHeader}>
-                  <div>
-                    <h3>{server.name}</h3>
-                    {isOwner && <span className={styles.ownerBadge}>Owner</span>}
-                  </div>
+                {firstChannel ? (
+                  <Link
+                    className={styles.serverMainLink}
+                    href={`/channels/${firstChannel.id}`}
+                  >
+                    <span className={styles.serverIcon} aria-hidden="true">
+                      {server.name.charAt(0).toUpperCase() || "B"}
+                    </span>
 
-                  {isOwner && (
-                    <button
-                      className={styles.deleteButton}
-                      onClick={() => deleteServer(server.id, server.name)}
-                    >
-                      Delete server
-                    </button>
-                  )}
-                </div>
+                    <span className={styles.serverText}>
+                      <h3>{server.name}</h3>
 
-                {serverChannels.length === 0 ? (
-                  <p className={styles.empty}>No channels yet.</p>
+                      <span className={styles.serverMeta}>
+                        {isOwner && (
+                          <span className={styles.ownerBadge}>Owner</span>
+                        )}
+                        <span>Enter server</span>
+                      </span>
+                    </span>
+
+                    {unreadCount > 0 && (
+                      <span className={styles.serverUnreadBadge}>
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+
+                    <span className={styles.serverArrow} aria-hidden="true">
+                      →
+                    </span>
+                  </Link>
                 ) : (
-                  <div className={styles.channelList}>
-                    {serverChannels.map((channel) => (
-                      <Link
-                        className={styles.channel}
-                        href={`/channels/${channel.id}`}
-                        key={channel.id}
-                      >
-                        # {channel.name}
-                      </Link>
-                    ))}
+                  <div
+                    className={`${styles.serverMainLink} ${styles.disabledServerLink}`}
+                  >
+                    <span className={styles.serverIcon} aria-hidden="true">
+                      {server.name.charAt(0).toUpperCase() || "B"}
+                    </span>
+
+                    <span className={styles.serverText}>
+                      <h3>{server.name}</h3>
+
+                      <span className={styles.serverMeta}>
+                        {isOwner && (
+                          <span className={styles.ownerBadge}>Owner</span>
+                        )}
+                        <span>No channels yet</span>
+                      </span>
+                    </span>
                   </div>
                 )}
 
                 {isOwner && (
-                  <form
-                    className={styles.channelForm}
-                    onSubmit={(event) => createChannel(event, server.id)}
+                  <button
+                    className={styles.deleteButton}
+                    type="button"
+                    onClick={() => deleteServer(server.id, server.name)}
                   >
-                    <input
-                      value={newChannelNames[server.id] ?? ""}
-                      onChange={(event) =>
-                        setNewChannelNames((current) => ({
-                          ...current,
-                          [server.id]: event.target.value,
-                        }))
-                      }
-                      placeholder="New channel name"
-                    />
-                    <button>Create channel</button>
-                  </form>
+                    Delete
+                  </button>
                 )}
               </section>
             );
           })}
+
+          {!status && servers.length === 0 && (
+            <p className={styles.empty}>No servers yet. Create one to start.</p>
+          )}
         </div>
       </section>
     </main>

@@ -48,55 +48,21 @@ a {
   }
 }
 
-
-/* --- Bubbles Bubble Pop theme foundation --- */
+/* Bubble Pop v4 global polish */
 :root {
-  --bp-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-
-  --bp-bg-light:
-    radial-gradient(circle at 12% 8%, rgba(112, 245, 241, 0.36), transparent 34%),
-    radial-gradient(circle at 78% 3%, rgba(255, 123, 190, 0.34), transparent 32%),
-    radial-gradient(circle at 92% 70%, rgba(255, 189, 215, 0.22), transparent 36%),
-    radial-gradient(circle at 30% 106%, rgba(160, 255, 225, 0.24), transparent 34%),
-    linear-gradient(145deg, #eaffff 0%, #f9f2ff 48%, #ffeaf5 100%);
-
-  --bp-bg-dark:
-    radial-gradient(circle at 12% 7%, rgba(0, 246, 255, 0.24), transparent 32%),
-    radial-gradient(circle at 78% 3%, rgba(255, 91, 189, 0.34), transparent 30%),
-    radial-gradient(circle at 92% 70%, rgba(255, 119, 176, 0.18), transparent 34%),
-    radial-gradient(circle at 34% 104%, rgba(115, 255, 209, 0.12), transparent 36%),
-    linear-gradient(145deg, #032737 0%, #071b2e 45%, #251020 100%);
-
-  --bp-text-light: #173944;
-  --bp-text-soft-light: #3b6572;
-  --bp-muted-light: rgba(43, 82, 96, 0.66);
-  --bp-panel-light: rgba(255, 255, 255, 0.58);
-  --bp-panel-strong-light: rgba(255, 255, 255, 0.78);
-  --bp-border-light: rgba(46, 153, 166, 0.18);
-
-  --bp-text-dark: #f3ffff;
-  --bp-text-soft-dark: rgba(237, 255, 255, 0.86);
-  --bp-muted-dark: rgba(174, 220, 225, 0.68);
-  --bp-panel-dark: rgba(4, 35, 52, 0.50);
-  --bp-panel-strong-dark: rgba(5, 48, 68, 0.78);
-  --bp-border-dark: rgba(119, 255, 250, 0.20);
+  --bp-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
 
   --bp-aqua: #78f3ef;
-  --bp-aqua-strong: #00f6ff;
+  --bp-aqua-strong: #00e8f2;
   --bp-pink: #ff7bc7;
-  --bp-pink-strong: #ff5bbd;
-  --bp-coral: #ff9bc8;
-  --bp-green: #45f7a4;
-  --bp-danger: #ff4f8f;
+  --bp-pink-strong: #ff4fac;
+  --bp-ink: #153845;
+  --bp-glass-light: rgba(255, 255, 255, 0.56);
+  --bp-glass-dark: rgba(4, 35, 52, 0.5);
 
-  --bp-radius-xl: 34px;
-  --bp-radius-lg: 24px;
-  --bp-radius-md: 18px;
-  --bp-radius-sm: 12px;
-
-  --bp-shadow-light: 0 30px 90px rgba(255, 111, 181, 0.18);
-  --bp-shadow-dark: 0 30px 90px rgba(0, 0, 0, 0.38);
-  --bp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+  --background: #efffff;
+  --foreground: #153845;
 }
 
 body {
@@ -109,7 +75,12 @@ body::before {
   inset: 0;
   z-index: -2;
   pointer-events: none;
-  background: var(--bp-bg-light);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(112, 245, 241, 0.30), transparent 35%),
+    radial-gradient(circle at 78% 3%, rgba(255, 123, 190, 0.34), transparent 32%),
+    radial-gradient(circle at 92% 70%, rgba(255, 189, 215, 0.20), transparent 36%),
+    radial-gradient(circle at 30% 106%, rgba(160, 255, 225, 0.20), transparent 34%),
+    linear-gradient(145deg, #efffff 0%, #fbf3ff 48%, #ffeaf5 100%);
 }
 
 body::after {
@@ -118,28 +89,28 @@ body::after {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.09;
+  opacity: 0.12;
   mix-blend-mode: multiply;
-  background-image: var(--bp-grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.58'/%3E%3C/svg%3E");
 }
 
 @media (prefers-color-scheme: dark) {
+  :root {
+    --background: #032737;
+    --foreground: #f3ffff;
+  }
+
   body::before {
-    background: var(--bp-bg-dark);
+    background:
+      radial-gradient(circle at 12% 7%, rgba(0, 232, 242, 0.20), transparent 34%),
+      radial-gradient(circle at 78% 3%, rgba(255, 79, 172, 0.32), transparent 31%),
+      radial-gradient(circle at 92% 70%, rgba(255, 119, 176, 0.16), transparent 36%),
+      radial-gradient(circle at 34% 104%, rgba(115, 255, 209, 0.10), transparent 38%),
+      linear-gradient(145deg, #032737 0%, #071b2e 48%, #251020 100%);
   }
 
   body::after {
-    opacity: 0.13;
+    opacity: 0.16;
     mix-blend-mode: soft-light;
-  }
-}
-
-@keyframes bubblesBubbleFloat {
-  from {
-    transform: translate3d(0, 10px, 0) scale(0.95);
-  }
-
-  to {
-    transform: translate3d(-24px, -24px, 0) scale(1.04);
   }
 }

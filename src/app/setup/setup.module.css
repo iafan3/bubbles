@@ -40,22 +40,27 @@
   color: #555;
 }
 
-/* --- Bubbles Bubble Pop theme override --- */
+/* Bubble Pop v4 theme polish: CSS-module safe */
 .page {
-  --theme-text: var(--bp-text-light);
-  --theme-text-soft: var(--bp-text-soft-light);
-  --theme-muted: var(--bp-muted-light);
-  --theme-surface: var(--bp-panel-light);
-  --theme-surface-strong: var(--bp-panel-strong-light);
-  --theme-border: var(--bp-border-light);
-  --theme-accent: var(--bp-pink);
-  --theme-accent-2: var(--bp-aqua);
+  --bp-text: #153845;
+  --bp-text-soft: #3b6572;
+  --bp-muted: rgba(43, 82, 96, 0.66);
+  --bp-glass: rgba(255, 255, 255, 0.56);
+  --bp-glass-strong: rgba(255, 255, 255, 0.74);
+  --bp-glass-hover: rgba(255, 255, 255, 0.66);
+  --bp-hairline: rgba(255, 255, 255, 0.34);
+  --bp-aqua: #78f3ef;
+  --bp-pink: #ff7bc7;
+  --bp-pink-strong: #ff4fac;
+  --bp-danger: #ff4f8f;
 
-  position: relative;
-  overflow: hidden;
-  color: var(--theme-text);
+  color: var(--bp-text);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(112, 245, 241, 0.30), transparent 35%),
+    radial-gradient(circle at 78% 3%, rgba(255, 123, 190, 0.34), transparent 32%),
+    radial-gradient(circle at 92% 70%, rgba(255, 189, 215, 0.20), transparent 36%),
+    linear-gradient(145deg, #efffff 0%, #fbf3ff 48%, #ffeaf5 100%);
   font-family: var(--bp-font);
-  background: var(--bp-bg-light);
 }
 
 .page::before {
@@ -63,139 +68,103 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.09;
+  opacity: 0.12;
   mix-blend-mode: multiply;
-  background-image: var(--bp-grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.58'/%3E%3C/svg%3E");
 }
 
 .card,
-.main,
-.server,
 .profileCard,
 .settingsCard,
-.previewCard {
-  border-color: var(--theme-border);
-  background: var(--theme-surface);
-  box-shadow: var(--bp-shadow-light), inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(30px) saturate(1.28);
+.previewCard,
+.server {
+  border: 0;
+  background: var(--bp-glass);
+  box-shadow:
+    0 30px 90px rgba(255, 111, 181, 0.18),
+    inset 0 1px 0 var(--bp-hairline);
+  backdrop-filter: blur(30px) saturate(1.25);
 }
 
+.header button,
+.cardHeader a,
+.buttons button,
+.card button,
+.button,
+.form button,
+.addEmojiForm button,
+.saveButton {
+  border: 0;
+  background: linear-gradient(135deg, var(--bp-pink), var(--bp-aqua));
+  color: #2b1025;
+  box-shadow: 0 18px 42px rgba(255, 123, 199, 0.24);
+  font-weight: 850;
+}
+
+.input,
+.form input,
+.form textarea,
+.addEmojiForm input {
+  border: 0;
+  background: rgba(255, 255, 255, 0.50);
+  box-shadow: inset 0 1px 0 var(--bp-hairline);
+  color: var(--bp-text);
+}
+
+.input:focus,
+.form input:focus,
+.form textarea:focus,
+.addEmojiForm input:focus {
+  border: 0;
+  box-shadow:
+    inset 0 1px 0 var(--bp-hairline),
+    0 0 0 5px rgba(255, 123, 199, 0.14);
+}
+
+.status,
+.statusMessage,
 .header p,
 .card p,
-.status,
-.empty {
-  color: var(--theme-muted);
-}
-
-.page button,
-.cardHeader a,
-.channel,
-.primary,
-.secondary,
-.button,
-.saveButton {
-  transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
-}
-
-.page button:hover,
-.cardHeader a:hover,
-.channel:hover,
-.primary:hover,
-.secondary:hover,
-.button:hover,
-.saveButton:hover {
-  transform: translateY(-1px);
+.section p {
+  color: var(--bp-muted);
 }
 
 @media (prefers-color-scheme: dark) {
   .page {
-    --theme-text: var(--bp-text-dark);
-    --theme-text-soft: var(--bp-text-soft-dark);
-    --theme-muted: var(--bp-muted-dark);
-    --theme-surface: var(--bp-panel-dark);
-    --theme-surface-strong: var(--bp-panel-strong-dark);
-    --theme-border: var(--bp-border-dark);
-    background: var(--bp-bg-dark);
+    --bp-text: #f3ffff;
+    --bp-text-soft: rgba(237, 255, 255, 0.84);
+    --bp-muted: rgba(174, 220, 225, 0.68);
+    --bp-glass: rgba(4, 35, 52, 0.48);
+    --bp-glass-strong: rgba(5, 48, 68, 0.70);
+    --bp-glass-hover: rgba(255, 255, 255, 0.075);
+    --bp-hairline: rgba(255, 255, 255, 0.08);
+    background:
+      radial-gradient(circle at 12% 7%, rgba(0, 232, 242, 0.20), transparent 34%),
+      radial-gradient(circle at 78% 3%, rgba(255, 79, 172, 0.32), transparent 31%),
+      radial-gradient(circle at 92% 70%, rgba(255, 119, 176, 0.16), transparent 36%),
+      linear-gradient(145deg, #032737 0%, #071b2e 48%, #251020 100%);
   }
 
   .page::before {
-    opacity: 0.13;
+    opacity: 0.16;
     mix-blend-mode: soft-light;
   }
 
   .card,
-  .main,
-  .server,
   .profileCard,
   .settingsCard,
-  .previewCard {
-    box-shadow: var(--bp-shadow-dark), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  .previewCard,
+  .server {
+    box-shadow:
+      0 30px 90px rgba(0, 0, 0, 0.36),
+      inset 0 1px 0 var(--bp-hairline);
   }
-}
 
-
-/* --- Bubbles Bubble Pop auth/setup/invite polish --- */
-.card {
-  border-radius: 32px;
-  border-color: var(--theme-border);
-}
-
-.card::after {
-  content: "";
-  position: absolute;
-  width: 150px;
-  height: 150px;
-  right: -52px;
-  bottom: -52px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  background:
-    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.94), transparent 18%),
-    radial-gradient(circle at 62% 70%, rgba(255, 123, 190, 0.22), transparent 42%),
-    radial-gradient(circle at 42% 46%, rgba(120, 243, 239, 0.28), transparent 72%);
-  opacity: 0.38;
-  pointer-events: none;
-  animation: bubblesBubbleFloat 7s ease-in-out infinite alternate;
-}
-
-.card h1 {
-  color: var(--theme-text);
-  font-size: 34px;
-  letter-spacing: -0.06em;
-}
-
-.card p,
-.status {
-  color: var(--theme-muted);
-}
-
-.input {
-  border-color: var(--theme-border);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--theme-surface-strong) 70%, transparent);
-  color: var(--theme-text);
-  outline: none;
-  transition: border 160ms ease, box-shadow 160ms ease, background 160ms ease;
-}
-
-.input:focus {
-  border-color: rgba(255, 123, 199, 0.52);
-  box-shadow: 0 0 0 5px rgba(255, 123, 199, 0.14);
-  background: var(--theme-surface-strong);
-}
-
-.buttons button,
-.card button,
-.button {
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--bp-pink), var(--bp-aqua));
-  color: #2b1025;
-  font-weight: 850;
-  box-shadow: 0 18px 42px rgba(255, 123, 199, 0.24);
-}
-
-@media (prefers-color-scheme: dark) {
-  .input {
+  .input,
+  .form input,
+  .form textarea,
+  .addEmojiForm input {
     background: rgba(255, 255, 255, 0.07);
+    color: var(--bp-text);
   }
 }
