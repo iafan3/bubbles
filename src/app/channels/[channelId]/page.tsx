@@ -19,6 +19,7 @@ type Message = {
   content: string;
   created_at: string;
   edited_at: string | null;
+  reply_to_message_id: string | null;
   media_url: string | null;
   media_path: string | null;
   media_name: string | null;
@@ -56,16 +57,6 @@ type ServerSettings = {
   reaction_emojis: string[];
 };
 
-type ProfileMap = Record<string, Profile>;
-
-type MessageContextMenu = {
-  messageId: string;
-  x: number;
-  y: number;
-};
-
-type UnreadMap = Record<string, number>;
-
 type VoiceCall = {
   channelId: string;
   channelName: string;
@@ -84,8 +75,9 @@ type UploadedMedia = {
 type Theme = "light" | "dark";
 
 const FALLBACK_REACTION_EMOJIS = ["👍", "😂", "❤️", "🔥", "😭", "🎉"];
-
 const MESSAGE_MEDIA_BUCKET = "message-media";
+const MAX_MEDIA_SIZE = 25 * 1024 * 1024;
+const MERGE_WINDOW_MS = 1000 * 60 * 3;
 
 const ALLOWED_MEDIA_TYPES = [
   "image/jpeg",
@@ -97,7 +89,8 @@ const ALLOWED_MEDIA_TYPES = [
   "video/quicktime",
 ];
 
-const MAX_MEDIA_SIZE = 25 * 1024 * 1024;
+const MESSAGE_SELECT =
+  "id, channel_id, user_id, content, created_at, edited_at, reply_to_message_id, media_url, media_path, media_name, media_type, media_size";
 
 export default function ChannelPage() {
   const params = useParams<{ channelId: string }>();
@@ -119,10 +112,12 @@ export default function ChannelPage() {
     []
   );
   const [serverChannels, setServerChannels] = useState<Channel[]>([]);
-  const [profiles, setProfiles] = useState<ProfileMap>({});
+  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
-  const [unreadByChannelId, setUnreadByChannelId] = useState<UnreadMap>({});
+  const [unreadByChannelId, setUnreadByChannelId] = useState<
+    Record<string, number>
+  >({});
   const [reactionEmojis, setReactionEmojis] = useState<string[]>(
     FALLBACK_REACTION_EMOJIS
   );
@@ -151,8 +146,13 @@ export default function ChannelPage() {
 
   const [editingMessageId, setEditingMessageId] = useState("");
   const [editingMessageContent, setEditingMessageContent] = useState("");
-  const [messageContextMenu, setMessageContextMenu] =
-    useState<MessageContextMenu | null>(null);
+  const [messageActionMenu, setMessageActionMenu] = useState<{
+    messageId: string;
+    type: "reactions" | "more";
+  } | null>(null);
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(
+    null
+  );
 
   const [voiceCall, setVoiceCall] = useState<VoiceCall | null>(null);
   const [isJoiningVoice, setIsJoiningVoice] = useState(false);
@@ -193,8 +193,7 @@ export default function ChannelPage() {
 
   const loadProfilesForMessages = useCallback(
     async (targetMessages: Message[]) => {
-      const userIds = targetMessages.map((message) => message.user_id);
-      await loadProfilesByIds(userIds);
+      await loadProfilesByIds(targetMessages.map((message) => message.user_id));
     },
     [loadProfilesByIds]
   );
@@ -246,8 +245,7 @@ export default function ChannelPage() {
 
     if (cachedUnreads) {
       try {
-        const parsedUnreads = JSON.parse(cachedUnreads) as UnreadMap;
-        setUnreadByChannelId(parsedUnreads);
+        setUnreadByChannelId(JSON.parse(cachedUnreads));
       } catch {
         window.localStorage.removeItem("bubbles-unreads");
       }
@@ -287,24 +285,24 @@ export default function ChannelPage() {
   }, [selectedMediaPreviewUrl]);
 
   useEffect(() => {
-    function closeContextMenu() {
-      setMessageContextMenu(null);
+    function closeMessageMenus() {
+      setMessageActionMenu(null);
     }
 
-    function closeContextMenuOnEscape(event: KeyboardEvent) {
+    function closeMessageMenusOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setMessageContextMenu(null);
+        setMessageActionMenu(null);
       }
     }
 
-    window.addEventListener("click", closeContextMenu);
-    window.addEventListener("scroll", closeContextMenu, true);
-    window.addEventListener("keydown", closeContextMenuOnEscape);
+    window.addEventListener("click", closeMessageMenus);
+    window.addEventListener("scroll", closeMessageMenus, true);
+    window.addEventListener("keydown", closeMessageMenusOnEscape);
 
     return () => {
-      window.removeEventListener("click", closeContextMenu);
-      window.removeEventListener("scroll", closeContextMenu, true);
-      window.removeEventListener("keydown", closeContextMenuOnEscape);
+      window.removeEventListener("click", closeMessageMenus);
+      window.removeEventListener("scroll", closeMessageMenus, true);
+      window.removeEventListener("keydown", closeMessageMenusOnEscape);
     };
   }, []);
 
@@ -353,7 +351,8 @@ export default function ChannelPage() {
       setDraggingChannelId("");
       setEditingMessageId("");
       setEditingMessageContent("");
-      setMessageContextMenu(null);
+      setMessageActionMenu(null);
+      setReplyingToMessage(null);
       setTypingUsers({});
       clearUnreadForChannel(channelId);
 
@@ -448,9 +447,7 @@ export default function ChannelPage() {
 
       const { data: messageData, error: messageError } = await supabase
         .from("messages")
-        .select(
-          "id, channel_id, user_id, content, created_at, edited_at, media_url, media_path, media_name, media_type, media_size"
-        )
+        .select(MESSAGE_SELECT)
         .eq("channel_id", channelId)
         .order("created_at", { ascending: true });
 
@@ -459,11 +456,11 @@ export default function ChannelPage() {
         return;
       }
 
-      const nextMessages = messageData ?? [];
+      const nextMessages = (messageData ?? []) as Message[];
 
-      setMessages(nextMessages as Message[]);
-      await loadProfilesForMessages(nextMessages as Message[]);
-      await loadReactionsForMessages(nextMessages as Message[]);
+      setMessages(nextMessages);
+      await loadProfilesForMessages(nextMessages);
+      await loadReactionsForMessages(nextMessages);
     }
 
     loadPage();
@@ -850,7 +847,7 @@ export default function ChannelPage() {
     window.sessionStorage.setItem("bubbles-channels", JSON.stringify(channels));
   }
 
-  function cacheUnreadCounts(unreads: UnreadMap) {
+  function cacheUnreadCounts(unreads: Record<string, number>) {
     window.localStorage.setItem("bubbles-unreads", JSON.stringify(unreads));
   }
 
@@ -998,6 +995,85 @@ export default function ChannelPage() {
     return Array.from(groups.values());
   }
 
+  function getReplyMessage(message: Message) {
+    if (!message.reply_to_message_id) return null;
+
+    return (
+      messages.find((item) => item.id === message.reply_to_message_id) ?? null
+    );
+  }
+
+  function getReplyPreviewText(message: Message) {
+    if (message.content.trim()) {
+      return message.content;
+    }
+
+    if (message.media_type?.startsWith("image/")) {
+      return "Image";
+    }
+
+    if (message.media_type?.startsWith("video/")) {
+      return "Video";
+    }
+
+    if (message.media_name) {
+      return message.media_name;
+    }
+
+    return "Message";
+  }
+
+  function scrollToMessage(messageId: string) {
+    const element = document.getElementById(`message-${messageId}`);
+
+    if (!element) return;
+
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    element.classList.add(styles.highlightMessage);
+
+    window.setTimeout(() => {
+      element.classList.remove(styles.highlightMessage);
+    }, 1200);
+  }
+
+  function shouldMergeMessage(message: Message, index: number) {
+    if (index === 0) return false;
+    if (message.reply_to_message_id) return false;
+
+    const previousMessage = messages[index - 1];
+
+    if (!previousMessage) return false;
+    if (previousMessage.user_id !== message.user_id) return false;
+
+    const currentTime = new Date(message.created_at).getTime();
+    const previousTime = new Date(previousMessage.created_at).getTime();
+
+    const difference = currentTime - previousTime;
+
+    return difference >= 0 && difference <= MERGE_WINDOW_MS;
+  }
+
+  function startReply(message: Message) {
+    setReplyingToMessage(message);
+    setMessageActionMenu(null);
+  }
+
+  function cancelReply() {
+    setReplyingToMessage(null);
+  }
+
+  async function copyMessageText(message: Message) {
+    if (!message.content.trim()) return;
+
+    await navigator.clipboard.writeText(message.content);
+    setMessageActionMenu(null);
+    setStatus("Message copied.");
+  }
+
   function sendTypingEvent() {
     if (!currentUserId || !typingChannelRef.current) return;
 
@@ -1089,25 +1165,6 @@ export default function ChannelPage() {
       window.location.href = `/channels/${message.channel_id}`;
       notification.close();
     };
-  }
-
-  function openMessageContextMenu(
-    event: React.MouseEvent<HTMLElement>,
-    message: Message
-  ) {
-    event.preventDefault();
-
-    const menuWidth = 220;
-    const menuHeight = message.user_id === currentUserId ? 154 : 94;
-
-    const x = Math.min(event.clientX, window.innerWidth - menuWidth - 12);
-    const y = Math.min(event.clientY, window.innerHeight - menuHeight - 12);
-
-    setMessageContextMenu({
-      messageId: message.id,
-      x,
-      y,
-    });
   }
 
   function cleanFileName(fileName: string) {
@@ -1250,7 +1307,7 @@ export default function ChannelPage() {
   async function toggleReaction(message: Message, emoji: string) {
     if (!currentChannel || !currentUserId) return;
 
-    setMessageContextMenu(null);
+    setMessageActionMenu(null);
     setStatus("");
 
     const existingReaction = messageReactions.find(
@@ -1398,7 +1455,6 @@ export default function ChannelPage() {
     const trimmed = content.trim();
 
     if (!trimmed && !selectedMediaFile) return;
-
     if (isSending) return;
 
     setIsSending(true);
@@ -1415,10 +1471,13 @@ export default function ChannelPage() {
       return;
     }
 
+    const previousReplyingToMessage = replyingToMessage;
+    const mediaFileToSend = selectedMediaFile;
+
     let uploadedMedia: UploadedMedia | null = null;
 
-    if (selectedMediaFile) {
-      uploadedMedia = await uploadMessageMedia(user.id, selectedMediaFile);
+    if (mediaFileToSend) {
+      uploadedMedia = await uploadMessageMedia(user.id, mediaFileToSend);
 
       if (!uploadedMedia) {
         setIsSending(false);
@@ -1435,6 +1494,7 @@ export default function ChannelPage() {
       content: trimmed,
       created_at: new Date().toISOString(),
       edited_at: null,
+      reply_to_message_id: previousReplyingToMessage?.id ?? null,
       media_url: uploadedMedia?.media_url ?? null,
       media_path: uploadedMedia?.media_path ?? null,
       media_name: uploadedMedia?.media_name ?? null,
@@ -1444,6 +1504,7 @@ export default function ChannelPage() {
 
     setMessages((current) => [...current, tempMessage]);
     setContent("");
+    setReplyingToMessage(null);
     clearSelectedMedia();
 
     await loadProfilesForMessages([tempMessage]);
@@ -1454,15 +1515,14 @@ export default function ChannelPage() {
         channel_id: channelId,
         user_id: user.id,
         content: trimmed,
+        reply_to_message_id: previousReplyingToMessage?.id ?? null,
         media_url: uploadedMedia?.media_url ?? null,
         media_path: uploadedMedia?.media_path ?? null,
         media_name: uploadedMedia?.media_name ?? null,
         media_type: uploadedMedia?.media_type ?? null,
         media_size: uploadedMedia?.media_size ?? null,
       })
-      .select(
-        "id, channel_id, user_id, content, created_at, edited_at, media_url, media_path, media_name, media_type, media_size"
-      )
+      .select(MESSAGE_SELECT)
       .single();
 
     setIsSending(false);
@@ -1470,6 +1530,7 @@ export default function ChannelPage() {
     if (error) {
       setStatus(error.message);
       setContent(trimmed);
+      setReplyingToMessage(previousReplyingToMessage);
 
       setMessages((current) =>
         current.filter((message) => message.id !== tempId)
@@ -1504,7 +1565,7 @@ export default function ChannelPage() {
   }
 
   function startEditMessage(message: Message) {
-    setMessageContextMenu(null);
+    setMessageActionMenu(null);
     setEditingMessageId(message.id);
     setEditingMessageContent(message.content);
   }
@@ -1548,9 +1609,7 @@ export default function ChannelPage() {
         edited_at: new Date().toISOString(),
       })
       .eq("id", message.id)
-      .select(
-        "id, channel_id, user_id, content, created_at, edited_at, media_url, media_path, media_name, media_type, media_size"
-      )
+      .select(MESSAGE_SELECT)
       .single();
 
     if (error) {
@@ -1575,7 +1634,7 @@ export default function ChannelPage() {
   }
 
   async function deleteMessage(message: Message) {
-    setMessageContextMenu(null);
+    setMessageActionMenu(null);
 
     const confirmed = window.confirm("Delete this message?");
 
@@ -1877,10 +1936,6 @@ export default function ChannelPage() {
   const sortedOnlineUserIds = [...onlineUserIds].sort((a, b) =>
     getProfileName(a).localeCompare(getProfileName(b))
   );
-
-  const selectedContextMessage = messageContextMenu
-    ? messages.find((message) => message.id === messageContextMenu.messageId)
-    : null;
 
   const typingText = getTypingText();
 
@@ -2220,36 +2275,184 @@ export default function ChannelPage() {
         )}
 
         <div className={styles.messages}>
-          {messages.map((message) => {
+          {messages.map((message, index) => {
             const isEditing = editingMessageId === message.id;
             const reactionGroups = getReactionGroups(message.id);
             const messageAvatarKey = `message-${message.id}`;
+            const isMerged = shouldMergeMessage(message, index);
+            const replyMessage = getReplyMessage(message);
+            const isReactionMenuOpen =
+              messageActionMenu?.messageId === message.id &&
+              messageActionMenu.type === "reactions";
+            const isMoreMenuOpen =
+              messageActionMenu?.messageId === message.id &&
+              messageActionMenu.type === "more";
 
             return (
               <article
+                id={`message-${message.id}`}
                 key={message.id}
-                className={styles.message}
-                onContextMenu={(event) =>
-                  openMessageContextMenu(event, message)
-                }
+                className={`${styles.message} ${
+                  isMerged ? styles.mergedMessage : ""
+                }`}
               >
-                <div className={styles.messageHeader}>
-                  <div
-                    className={styles.messageAvatar}
-                    onMouseEnter={() => setHoveredAvatarKey(messageAvatarKey)}
-                    onMouseLeave={() => setHoveredAvatarKey("")}
-                  >
-                    {renderHoverAvatar(message.user_id, messageAvatarKey)}
+                <div
+                  className={styles.messageActionStrip}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className={styles.messageActionGroup}>
+                    <button
+                      type="button"
+                      className={styles.messageActionButton}
+                      onClick={() =>
+                        setMessageActionMenu({
+                          messageId: message.id,
+                          type: "reactions",
+                        })
+                      }
+                      title="Add reaction"
+                    >
+                      ☺
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.messageActionButton}
+                      onClick={() => startReply(message)}
+                      title="Reply"
+                    >
+                      ↩
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.messageActionButton}
+                      onClick={() =>
+                        setMessageActionMenu({
+                          messageId: message.id,
+                          type: "more",
+                        })
+                      }
+                      title="More"
+                    >
+                      ⋯
+                    </button>
                   </div>
 
-                  <div className={styles.messageBody}>
-                    <div className={styles.messageMeta}>
-                      <strong>{getProfileName(message.user_id)}</strong>
-                      <time>{new Date(message.created_at).toLocaleString()}</time>
-                      {message.edited_at && (
-                        <span className={styles.editedLabel}>edited</span>
+                  {isReactionMenuOpen && (
+                    <div
+                      className={styles.reactionPicker}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {reactionEmojis.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => toggleReaction(message, emoji)}
+                          title={`React with ${emoji}`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {isMoreMenuOpen && (
+                    <div
+                      className={styles.messageMoreMenu}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <button type="button" onClick={() => startReply(message)}>
+                        Reply
+                      </button>
+
+                      {message.content.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => copyMessageText(message)}
+                        >
+                          Copy text
+                        </button>
+                      )}
+
+                      {message.media_url && (
+                        <a
+                          href={message.media_url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open attachment
+                        </a>
+                      )}
+
+                      {message.user_id === currentUserId && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startEditMessage(message)}
+                          >
+                            Edit message
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.dangerContextButton}
+                            onClick={() => deleteMessage(message)}
+                          >
+                            Delete message
+                          </button>
+                        </>
                       )}
                     </div>
+                  )}
+                </div>
+
+                <div className={styles.messageHeader}>
+                  {isMerged ? (
+                    <div className={styles.mergedMessageSpacer}>
+                      <time>
+                        {new Date(message.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </time>
+                    </div>
+                  ) : (
+                    <div
+                      className={styles.messageAvatar}
+                      onMouseEnter={() => setHoveredAvatarKey(messageAvatarKey)}
+                      onMouseLeave={() => setHoveredAvatarKey("")}
+                    >
+                      {renderHoverAvatar(message.user_id, messageAvatarKey)}
+                    </div>
+                  )}
+
+                  <div className={styles.messageBody}>
+                    {!isMerged && (
+                      <div className={styles.messageMeta}>
+                        <strong>{getProfileName(message.user_id)}</strong>
+                        <time>
+                          {new Date(message.created_at).toLocaleString()}
+                        </time>
+                        {message.edited_at && (
+                          <span className={styles.editedLabel}>edited</span>
+                        )}
+                      </div>
+                    )}
+
+                    {replyMessage && (
+                      <button
+                        type="button"
+                        className={styles.replyPreview}
+                        onClick={() => scrollToMessage(replyMessage.id)}
+                      >
+                        <span className={styles.replyIndicatorLine} />
+                        <strong>{getProfileName(replyMessage.user_id)}</strong>
+                        <span className={styles.replyPreviewText}>
+                          {getReplyPreviewText(replyMessage)}
+                        </span>
+                      </button>
+                    )}
 
                     {isEditing ? (
                       <input
@@ -2315,6 +2518,26 @@ export default function ChannelPage() {
         {status && <p className={styles.status}>{status}</p>}
 
         <div className={styles.composer}>
+          {replyingToMessage && (
+            <div className={styles.replyComposer}>
+              <div className={styles.replyComposerText}>
+                <strong>Replying to {getProfileName(replyingToMessage.user_id)}</strong>
+                <span className={styles.replyComposerPreview}>
+                  {getReplyPreviewText(replyingToMessage)}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className={styles.replyComposerClose}
+                onClick={cancelReply}
+                title="Cancel reply"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           {selectedMediaFile && selectedMediaPreviewUrl && (
             <div className={styles.selectedMediaPreview}>
               <div className={styles.selectedMediaContent}>
@@ -2363,49 +2586,6 @@ export default function ChannelPage() {
             </button>
           </form>
         </div>
-
-        {messageContextMenu && selectedContextMessage && (
-          <div
-            className={styles.messageContextMenu}
-            style={{
-              left: messageContextMenu.x,
-              top: messageContextMenu.y,
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className={styles.reactionMenu}>
-              {reactionEmojis.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => toggleReaction(selectedContextMessage, emoji)}
-                  title={`React with ${emoji}`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-
-            {selectedContextMessage.user_id === currentUserId && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => startEditMessage(selectedContextMessage)}
-                >
-                  Edit message
-                </button>
-
-                <button
-                  type="button"
-                  className={styles.dangerContextButton}
-                  onClick={() => deleteMessage(selectedContextMessage)}
-                >
-                  Delete message
-                </button>
-              </>
-            )}
-          </div>
-        )}
       </section>
 
       <aside className={styles.membersPanel}>

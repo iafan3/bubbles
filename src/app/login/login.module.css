@@ -51,3 +51,163 @@
 .status {
   margin-top: 16px;
 }
+
+/* --- Bubbles Bubble Pop theme override --- */
+.page {
+  --theme-text: var(--bp-text-light);
+  --theme-text-soft: var(--bp-text-soft-light);
+  --theme-muted: var(--bp-muted-light);
+  --theme-surface: var(--bp-panel-light);
+  --theme-surface-strong: var(--bp-panel-strong-light);
+  --theme-border: var(--bp-border-light);
+  --theme-accent: var(--bp-pink);
+  --theme-accent-2: var(--bp-aqua);
+
+  position: relative;
+  overflow: hidden;
+  color: var(--theme-text);
+  font-family: var(--bp-font);
+  background: var(--bp-bg-light);
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: multiply;
+  background-image: var(--bp-grain);
+}
+
+.card,
+.main,
+.server,
+.profileCard,
+.settingsCard,
+.previewCard {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  box-shadow: var(--bp-shadow-light), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(30px) saturate(1.28);
+}
+
+.header p,
+.card p,
+.status,
+.empty {
+  color: var(--theme-muted);
+}
+
+button,
+.cardHeader a,
+.channel,
+.primary,
+.secondary,
+.button,
+.saveButton {
+  transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
+}
+
+button:hover,
+.cardHeader a:hover,
+.channel:hover,
+.primary:hover,
+.secondary:hover,
+.button:hover,
+.saveButton:hover {
+  transform: translateY(-1px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .page {
+    --theme-text: var(--bp-text-dark);
+    --theme-text-soft: var(--bp-text-soft-dark);
+    --theme-muted: var(--bp-muted-dark);
+    --theme-surface: var(--bp-panel-dark);
+    --theme-surface-strong: var(--bp-panel-strong-dark);
+    --theme-border: var(--bp-border-dark);
+    background: var(--bp-bg-dark);
+  }
+
+  .page::before {
+    opacity: 0.13;
+    mix-blend-mode: soft-light;
+  }
+
+  .card,
+  .main,
+  .server,
+  .profileCard,
+  .settingsCard,
+  .previewCard {
+    box-shadow: var(--bp-shadow-dark), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
+
+/* --- Bubbles Bubble Pop auth/setup/invite polish --- */
+.card {
+  border-radius: 32px;
+  border-color: var(--theme-border);
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  right: -52px;
+  bottom: -52px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.94), transparent 18%),
+    radial-gradient(circle at 62% 70%, rgba(255, 123, 190, 0.22), transparent 42%),
+    radial-gradient(circle at 42% 46%, rgba(120, 243, 239, 0.28), transparent 72%);
+  opacity: 0.38;
+  pointer-events: none;
+  animation: bubblesBubbleFloat 7s ease-in-out infinite alternate;
+}
+
+.card h1 {
+  color: var(--theme-text);
+  font-size: 34px;
+  letter-spacing: -0.06em;
+}
+
+.card p,
+.status {
+  color: var(--theme-muted);
+}
+
+.input {
+  border-color: var(--theme-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--theme-surface-strong) 70%, transparent);
+  color: var(--theme-text);
+  outline: none;
+  transition: border 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.input:focus {
+  border-color: rgba(255, 123, 199, 0.52);
+  box-shadow: 0 0 0 5px rgba(255, 123, 199, 0.14);
+  background: var(--theme-surface-strong);
+}
+
+.buttons button,
+.card button,
+.button {
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--bp-pink), var(--bp-aqua));
+  color: #2b1025;
+  font-weight: 850;
+  box-shadow: 0 18px 42px rgba(255, 123, 199, 0.24);
+}
+
+@media (prefers-color-scheme: dark) {
+  .input {
+    background: rgba(255, 255, 255, 0.07);
+  }
+}

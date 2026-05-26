@@ -302,3 +302,221 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* --- Bubbles Bubble Pop theme override --- */
+.page {
+  --theme-text: var(--bp-text-light);
+  --theme-text-soft: var(--bp-text-soft-light);
+  --theme-muted: var(--bp-muted-light);
+  --theme-surface: var(--bp-panel-light);
+  --theme-surface-strong: var(--bp-panel-strong-light);
+  --theme-border: var(--bp-border-light);
+  --theme-accent: var(--bp-pink);
+  --theme-accent-2: var(--bp-aqua);
+
+  position: relative;
+  overflow: hidden;
+  color: var(--theme-text);
+  font-family: var(--bp-font);
+  background: var(--bp-bg-light);
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: multiply;
+  background-image: var(--bp-grain);
+}
+
+.card,
+.main,
+.server,
+.profileCard,
+.settingsCard,
+.previewCard {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  box-shadow: var(--bp-shadow-light), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(30px) saturate(1.28);
+}
+
+.header p,
+.card p,
+.status,
+.empty {
+  color: var(--theme-muted);
+}
+
+button,
+.cardHeader a,
+.channel,
+.primary,
+.secondary,
+.button,
+.saveButton {
+  transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
+}
+
+button:hover,
+.cardHeader a:hover,
+.channel:hover,
+.primary:hover,
+.secondary:hover,
+.button:hover,
+.saveButton:hover {
+  transform: translateY(-1px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .page {
+    --theme-text: var(--bp-text-dark);
+    --theme-text-soft: var(--bp-text-soft-dark);
+    --theme-muted: var(--bp-muted-dark);
+    --theme-surface: var(--bp-panel-dark);
+    --theme-surface-strong: var(--bp-panel-strong-dark);
+    --theme-border: var(--bp-border-dark);
+    background: var(--bp-bg-dark);
+  }
+
+  .page::before {
+    opacity: 0.13;
+    mix-blend-mode: soft-light;
+  }
+
+  .card,
+  .main,
+  .server,
+  .profileCard,
+  .settingsCard,
+  .previewCard {
+    box-shadow: var(--bp-shadow-dark), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
+
+/* --- Bubbles Bubble Pop profile polish --- */
+.topbar a {
+  color: var(--theme-text-soft);
+  font-weight: 850;
+}
+
+.topbar a:hover {
+  color: #b51f73;
+  text-decoration: none;
+}
+
+.profileCard,
+.settingsCard,
+.previewCard {
+  border-radius: var(--bp-radius-xl);
+}
+
+.banner {
+  background:
+    radial-gradient(circle at 16% 16%, rgba(255, 255, 255, 0.62), transparent 14%),
+    radial-gradient(circle at 78% 3%, rgba(255, 123, 190, 0.62), transparent 35%),
+    radial-gradient(circle at 18% 72%, rgba(120, 243, 239, 0.64), transparent 34%),
+    linear-gradient(135deg, #78f3ef, #ff7bc7 72%, #ffe3f0);
+}
+
+.avatarWrap {
+  border-radius: 38px;
+  background: color-mix(in srgb, var(--theme-surface-strong) 78%, transparent);
+  box-shadow: 0 18px 42px rgba(255, 123, 199, 0.18);
+}
+
+.avatar,
+.avatarFallback {
+  border-radius: 32px;
+}
+
+.avatarFallback {
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.96), transparent 17%),
+    linear-gradient(135deg, var(--bp-aqua), var(--bp-pink));
+  color: #2b1025;
+}
+
+.profileHeader h1,
+.settingsCard h1,
+.previewCard h2 {
+  color: var(--theme-text);
+  letter-spacing: -0.06em;
+}
+
+.profileHeader p,
+.settingsCard > p,
+.statusMessage {
+  color: var(--theme-muted);
+}
+
+.statusPill {
+  border-color: rgba(255, 123, 199, 0.24);
+  background: rgba(255, 123, 199, 0.14);
+  color: #b51f73;
+  font-weight: 850;
+}
+
+.profileSection,
+.uploadBox {
+  border-color: var(--theme-border);
+  border-radius: var(--bp-radius-lg);
+  background: color-mix(in srgb, var(--theme-surface-strong) 58%, transparent);
+}
+
+.profileSection h2 {
+  color: var(--theme-muted);
+}
+
+.profileSection p,
+.form label {
+  color: var(--theme-text-soft);
+}
+
+.form input,
+.form textarea {
+  border-color: var(--theme-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--theme-surface-strong) 70%, transparent);
+  color: var(--theme-text);
+}
+
+.form input:focus,
+.form textarea:focus {
+  border-color: rgba(255, 123, 199, 0.52);
+  box-shadow: 0 0 0 5px rgba(255, 123, 199, 0.14);
+}
+
+.uploadBox span {
+  color: #b51f73;
+  font-weight: 800;
+}
+
+.form button {
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--bp-pink), var(--bp-aqua));
+  color: #2b1025;
+  font-weight: 850;
+  box-shadow: 0 18px 42px rgba(255, 123, 199, 0.24);
+}
+
+@media (prefers-color-scheme: dark) {
+  .topbar a:hover,
+  .uploadBox span {
+    color: #ff9bd2;
+  }
+
+  .statusPill {
+    color: #ff9bd2;
+  }
+
+  .form input,
+  .form textarea,
+  .profileSection,
+  .uploadBox {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
