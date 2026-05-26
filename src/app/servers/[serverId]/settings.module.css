@@ -1,0 +1,142 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: #f4f4f5;
+  font-family: Arial, sans-serif;
+}
+
+.card {
+  width: min(720px, 100%);
+  padding: 24px;
+  border: 1px solid #ddd;
+  border-radius: 18px;
+  background: white;
+}
+
+.topbar {
+  margin-bottom: 18px;
+}
+
+.topbar a {
+  color: #111;
+  text-decoration: none;
+}
+
+.topbar a:hover {
+  text-decoration: underline;
+}
+
+.header {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #eee;
+}
+
+.header h1 {
+  margin: 0 0 6px;
+  font-size: 30px;
+}
+
+.header p {
+  margin: 0;
+  color: #555;
+}
+
+.section {
+  margin-top: 24px;
+}
+
+.section h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.section p {
+  margin: 0 0 16px;
+  color: #555;
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.emojiItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.emojiItem span {
+  font-size: 24px;
+}
+
+.emojiItem button {
+  padding: 7px 9px;
+  border: none;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #b00020;
+  cursor: pointer;
+}
+
+.emojiItem button:hover {
+  background: #fecaca;
+}
+
+.addEmojiForm {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.addEmojiForm input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.addEmojiForm button,
+.saveButton {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  background: #111;
+  color: white;
+  cursor: pointer;
+}
+
+.addEmojiForm button:hover,
+.saveButton:hover {
+  background: #333;
+}
+
+.saveButton {
+  width: 100%;
+  margin-top: 24px;
+}
+
+.status {
+  margin-top: 16px;
+  color: #555;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 16px;
+  }
+
+  .addEmojiForm {
+    flex-direction: column;
+  }
+}
