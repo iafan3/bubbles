@@ -1,129 +1,127 @@
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
 
 type Channel = {
   id: string;
   server_id: string;
   name: string;
-  type: "text" | "voice";
+  type: "text" | "voice" | null;
 };
 
-type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-};
+const DAILY_API_BASE_URL = "https://api.daily.co/v1";
 
-type DailyRoomResponse =
-  | {
-      id: string;
-      name: string;
-      url: string;
-      privacy: "public" | "private";
-      created_at: string;
-      config?: Record<string, unknown>;
-    }
-  | {
-      error: string;
-      info?: string;
-    };
+function getEnv(name: string) {
+  const value = process.env[name];
 
-type DailyTokenResponse =
-  | {
-      token: string;
-    }
-  | {
-      error: string;
-      info?: string;
-    };
-
-function getBearerToken(request: Request) {
-  const authorizationHeader = request.headers.get("authorization");
-
-  if (!authorizationHeader?.startsWith("Bearer ")) {
-    return "";
+  if (!value) {
+    throw new Error(`${name} is not set.`);
   }
 
-  return authorizationHeader.replace("Bearer ", "").trim();
+  return value;
 }
 
 function makeDailyRoomName(channelId: string) {
-  return `bubbles_voice_${channelId}`.replace(/[^A-Za-z0-9_-]/g, "_");
+  return `bubbles-${channelId}`
+    .replace(/[^A-Za-z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 96);
 }
 
-export async function POST(request: Request) {
+async function dailyRequest<T>(
+  path: string,
+  init: RequestInit = {}
+): Promise<{ data: T | null; error: string | null; status: number }> {
+  const apiKey = getEnv("DAILY_API_KEY");
+
+  const response = await fetch(`${DAILY_API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+    cache: "no-store",
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    const message =
+      data?.info ||
+      data?.error ||
+      data?.message ||
+      `Daily request failed with status ${response.status}.`;
+
+    return {
+      data: null,
+      error: message,
+      status: response.status,
+    };
+  }
+
+  return {
+    data: data as T,
+    error: null,
+    status: response.status,
+  };
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const { channelId } = (await request.json()) as {
+    const authorization = request.headers.get("authorization") ?? "";
+    const token = authorization.replace(/^Bearer\s+/i, "").trim();
+
+    if (!token) {
+      return NextResponse.json({ error: "Missing Supabase session." }, { status: 401 });
+    }
+
+    const body = (await request.json()) as {
       channelId?: string;
     };
 
-    if (!channelId) {
-      return NextResponse.json(
-        { error: "Missing channelId." },
-        { status: 400 }
-      );
+    if (!body.channelId) {
+      return NextResponse.json({ error: "Missing channelId." }, { status: 400 });
     }
 
-    const accessToken = getBearerToken(request);
+    const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
+    const supabaseAnonKey = getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: "Missing auth token." },
-        { status: 401 }
-      );
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-    const dailyApiKey = process.env.DAILY_API_KEY;
-    const dailyDomain = process.env.DAILY_DOMAIN;
-
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json(
-        { error: "Supabase environment variables are missing." },
-        { status: 500 }
-      );
-    }
-
-    if (!dailyApiKey || !dailyDomain) {
-      return NextResponse.json(
-        { error: "Daily environment variables are missing." },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey, {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     });
 
     const {
       data: { user },
       error: userError,
-    } = await supabase.auth.getUser(accessToken);
+    } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: "You need to sign in first." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid Supabase session." }, { status: 401 });
     }
 
-    const { data: channel, error: channelError } = await supabase
+    const { data: channelData, error: channelError } = await supabase
       .from("channels")
       .select("id, server_id, name, type")
-      .eq("id", channelId)
-      .single<Channel>();
+      .eq("id", body.channelId)
+      .single();
 
-    if (channelError || !channel) {
+    if (channelError || !channelData) {
       return NextResponse.json(
         { error: channelError?.message ?? "Voice channel not found." },
         { status: 404 }
       );
     }
+
+    const channel = channelData as Channel;
 
     if (channel.type !== "voice") {
       return NextResponse.json(
@@ -132,108 +130,119 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id, username, display_name")
-      .eq("id", user.id)
-      .maybeSingle<Profile>();
+    const { data: membership, error: membershipError } = await supabase
+      .from("server_members")
+      .select("server_id")
+      .eq("server_id", channel.server_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    const displayName =
-      profile?.display_name || profile?.username || user.email || "Bubbles user";
+    if (membershipError) {
+      return NextResponse.json({ error: membershipError.message }, { status: 500 });
+    }
+
+    if (!membership) {
+      return NextResponse.json(
+        { error: "You are not a member of this server." },
+        { status: 403 }
+      );
+    }
 
     const roomName = makeDailyRoomName(channel.id);
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    const roomExpiresAt = nowInSeconds + 60 * 60 * 24;
+    const tokenExpiresAt = nowInSeconds + 60 * 60 * 12;
 
-    const roomResponse = await fetch("https://api.daily.co/v1/rooms", {
+    type DailyRoom = {
+      name: string;
+      url: string;
+    };
+
+    let room: DailyRoom | null = null;
+
+    const createRoom = await dailyRequest<DailyRoom>("/rooms", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${dailyApiKey}`,
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         name: roomName,
         privacy: "private",
         properties: {
+          exp: roomExpiresAt,
+          eject_at_room_exp: true,
           enable_screenshare: true,
-          enable_chat: false,
-          enable_people_ui: true,
-          enable_network_ui: true,
-          start_audio_off: false,
           start_video_off: true,
-          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+          start_audio_off: false,
+          enable_people_ui: true,
         },
       }),
     });
 
-    const roomData = (await roomResponse.json()) as DailyRoomResponse;
-
-    const roomAlreadyExists =
-      !roomResponse.ok &&
-      "error" in roomData &&
-      roomData.error.toLowerCase().includes("already exists");
-
-    if (!roomResponse.ok && !roomAlreadyExists) {
-      return NextResponse.json(
+    if (createRoom.data) {
+      room = createRoom.data;
+    } else {
+      const existingRoom = await dailyRequest<DailyRoom>(
+        `/rooms/${encodeURIComponent(roomName)}`,
         {
-          error:
-            "error" in roomData
-              ? roomData.error
-              : "Could not create Daily room.",
-        },
-        { status: roomResponse.status }
+          method: "GET",
+        }
       );
+
+      if (existingRoom.data) {
+        room = existingRoom.data;
+      } else {
+        return NextResponse.json(
+          {
+            error:
+              createRoom.error ||
+              existingRoom.error ||
+              "Could not create or load Daily room.",
+          },
+          { status: createRoom.status || existingRoom.status || 500 }
+        );
+      }
     }
 
-    const roomUrl =
-      "url" in roomData
-        ? roomData.url
-        : `https://${dailyDomain}.daily.co/${roomName}`;
+    type DailyMeetingToken = {
+      token: string;
+    };
 
-    const tokenResponse = await fetch(
-      "https://api.daily.co/v1/meeting-tokens",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${dailyApiKey}`,
-          "Content-Type": "application/json",
+    const meetingToken = await dailyRequest<DailyMeetingToken>("/meeting-tokens", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: {
+          room_name: roomName,
+          user_id: user.id.slice(0, 36),
+          user_name: user.email ?? "Bubbles user",
+          is_owner: false,
+          enable_screenshare: true,
+          start_video_off: true,
+          start_audio_off: false,
+          exp: tokenExpiresAt,
         },
-        body: JSON.stringify({
-          properties: {
-            room_name: roomName,
-            user_id: user.id,
-            user_name: displayName,
-            enable_screenshare: true,
-            enable_prejoin_ui: true,
-            start_video_off: true,
-            start_audio_off: false,
-            exp: Math.floor(Date.now() / 1000) + 60 * 60 * 8,
-          },
-        }),
-      }
-    );
+      }),
+    });
 
-    const tokenData = (await tokenResponse.json()) as DailyTokenResponse;
-
-    if (!tokenResponse.ok || !("token" in tokenData)) {
+    if (!meetingToken.data?.token) {
       return NextResponse.json(
-        {
-          error:
-            "error" in tokenData
-              ? tokenData.error
-              : "Could not create Daily meeting token.",
-        },
-        { status: tokenResponse.status }
+        { error: meetingToken.error ?? "Could not create Daily meeting token." },
+        { status: meetingToken.status || 500 }
       );
     }
 
     return NextResponse.json({
-      roomUrl,
-      token: tokenData.token,
-      roomName,
+      roomUrl: room.url,
+      token: meetingToken.data.token,
       channelName: channel.name,
     });
-  } catch {
+  } catch (error) {
+    console.error(error);
+
     return NextResponse.json(
-      { error: "Unexpected Daily voice room error." },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Could not create Daily voice room.",
+      },
       { status: 500 }
     );
   }

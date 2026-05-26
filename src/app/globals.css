@@ -114,3 +114,10 @@ body::after {
     mix-blend-mode: soft-light;
   }
 }
+
+
+/* Bubble Pop v5: remove global gradient feel */
+:root {
+  --bp-pink: #ff7bc7;
+  --bp-aqua: #78f3ef;
+}

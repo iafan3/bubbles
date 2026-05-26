@@ -2203,3 +2203,180 @@
     max-width: 92px;
   }
 }
+
+
+/* Bubble Pop v5 chat fixes: solid buttons + timestamp corner */
+.inviteButton,
+.form button,
+.jumpToLatestButton,
+.attachButton,
+.themeButton,
+.notificationButton,
+.voiceCallTopbar button,
+.selectedMediaPreview button,
+.messageActionButton,
+.reactionPicker button,
+.messageMoreMenu button {
+  background: rgba(255, 123, 199, 0.18) !important;
+  color: var(--text) !important;
+  border: 0 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  filter: none !important;
+}
+
+.inviteButton:hover,
+.form button:hover,
+.jumpToLatestButton:hover,
+.attachButton:hover,
+.themeButton:hover,
+.notificationButton:hover,
+.voiceCallTopbar button:hover,
+.selectedMediaPreview button:hover,
+.messageActionButton:hover,
+.reactionPicker button:hover,
+.messageMoreMenu button:hover {
+  background: rgba(255, 123, 199, 0.28) !important;
+  color: var(--text) !important;
+  filter: none !important;
+}
+
+.page[data-theme="light"] .inviteButton,
+.page[data-theme="light"] .form button,
+.page[data-theme="light"] .jumpToLatestButton,
+.page[data-theme="light"] .attachButton,
+.page[data-theme="light"] .themeButton,
+.page[data-theme="light"] .notificationButton,
+.page[data-theme="light"] .messageActionButton,
+.page[data-theme="light"] .reactionPicker button,
+.page[data-theme="light"] .messageMoreMenu button {
+  background: rgba(255, 123, 199, 0.18) !important;
+  color: #7a174c !important;
+}
+
+.page[data-theme="dark"] .inviteButton,
+.page[data-theme="dark"] .form button,
+.page[data-theme="dark"] .jumpToLatestButton,
+.page[data-theme="dark"] .attachButton,
+.page[data-theme="dark"] .themeButton,
+.page[data-theme="dark"] .notificationButton,
+.page[data-theme="dark"] .messageActionButton,
+.page[data-theme="dark"] .reactionPicker button,
+.page[data-theme="dark"] .messageMoreMenu button {
+  background: rgba(255, 123, 199, 0.16) !important;
+  color: #ffd7ed !important;
+}
+
+.voiceCallTopbar button,
+.selectedMediaPreview button,
+.messageMoreMenu .messageMenuDanger,
+.messageMoreMenu button[class*="danger"] {
+  background: rgba(255, 79, 143, 0.15) !important;
+  color: var(--danger) !important;
+}
+
+/* Remove the hard border-on-hover look from messages. */
+.message,
+.message:hover,
+.message:focus-within {
+  border: 0 !important;
+  outline: 0 !important;
+}
+
+.message:hover,
+.message:focus-within {
+  background: var(--message-hover-bg, rgba(255, 255, 255, 0.052)) !important;
+  transform: none !important;
+}
+
+/* Make the message itself the timestamp positioning context. */
+.message {
+  position: relative !important;
+  padding: 12px 92px 12px 12px !important;
+}
+
+.messageHeader {
+  position: relative !important;
+  min-width: 0 !important;
+}
+
+.messageBody {
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.messageMeta {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  padding-right: 0 !important;
+}
+
+.messageMeta time {
+  display: none !important;
+}
+
+.editedLabel {
+  display: none !important;
+}
+
+.messageTimestampCorner {
+  position: absolute !important;
+  top: 10px !important;
+  right: 14px !important;
+  z-index: 2 !important;
+  max-width: 84px !important;
+  overflow: hidden !important;
+  color: var(--text-faint) !important;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.01em !important;
+  text-align: right !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  opacity: 0.72 !important;
+  pointer-events: none !important;
+}
+
+.messageEditedCorner {
+  position: absolute !important;
+  top: 23px !important;
+  right: 14px !important;
+  z-index: 2 !important;
+  color: var(--text-faint) !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+  text-align: right !important;
+  opacity: 0.58 !important;
+  pointer-events: none !important;
+}
+
+.mergedMessage .messageTimestampCorner,
+.mergedMessage .messageEditedCorner {
+  display: none !important;
+}
+
+.messageActionGroup,
+.reactionPicker,
+.messageMoreMenu {
+  border: 0 !important;
+  background: color-mix(in srgb, var(--surface-primary, var(--surface)) 90%, transparent) !important;
+  box-shadow: 0 22px 52px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+  backdrop-filter: blur(28px) saturate(1.25) !important;
+}
+
+@media (max-width: 760px) {
+  .message {
+    padding-right: 76px !important;
+  }
+
+  .messageTimestampCorner {
+    max-width: 68px !important;
+    right: 10px !important;
+  }
+
+  .messageEditedCorner {
+    right: 10px !important;
+  }
+}
