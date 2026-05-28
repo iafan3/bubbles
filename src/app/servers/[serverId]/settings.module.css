@@ -1,0 +1,698 @@
+.page {
+  min-height: 100vh;
+  padding: 28px;
+  color: var(--app-text);
+  font-family: var(--font-ui);
+  background: transparent;
+}
+
+.card {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.topbar {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.brandLink,
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  text-decoration: none;
+  box-shadow: var(--app-shadow-small);
+  transition:
+    background 180ms steps(4, end),
+    color 180ms steps(4, end),
+    transform 190ms cubic-bezier(0.2, 1.45, 0.22, 1),
+    box-shadow 190ms cubic-bezier(0.2, 1.2, 0.22, 1);
+}
+
+.brandLink {
+  padding: 0 14px;
+  background: color-mix(in srgb, var(--app-surface) 82%, transparent);
+  color: var(--app-text);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 760;
+}
+
+.backLink {
+  padding: 0 12px;
+  background: var(--app-accent);
+  color: #fffaf2;
+  font-weight: 760;
+}
+
+.brandLink:hover,
+.backLink:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--app-text) 10%, transparent);
+}
+
+.brandLink:hover {
+  background: var(--app-accent-soft);
+}
+
+.backLink:hover {
+  background: var(--app-accent-strong);
+}
+
+.header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 86%, transparent);
+  box-shadow: var(--app-shadow-pixel);
+  backdrop-filter: blur(5px);
+}
+
+.serverAvatarPreview {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-accent-soft);
+  color: var(--app-accent-strong);
+  font-size: 30px;
+  font-weight: 850;
+  box-shadow: var(--app-shadow-small);
+}
+
+.serverAvatarPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.header h1 {
+  margin: 0;
+  color: var(--app-text);
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: 0;
+}
+
+.header p {
+  margin: 6px 0 0;
+  color: var(--app-text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.section {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 82%, transparent);
+  box-shadow: var(--app-shadow-small);
+  backdrop-filter: blur(4px);
+}
+
+.sectionWide {
+  grid-column: 1 / -1;
+}
+
+.inviteSection {
+  display: grid;
+  align-content: start;
+}
+
+.section h2 {
+  margin: 0 0 6px;
+  color: var(--app-text);
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.section p {
+  margin: 0 0 14px;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.form,
+.customEmojiForm {
+  display: grid;
+  gap: 12px;
+}
+
+.form label {
+  display: grid;
+  gap: 7px;
+  color: var(--app-text-soft);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.form input,
+.addEmojiForm input,
+.customEmojiForm input,
+.roleForm input:not([type="color"]),
+.memberRoleItem select {
+  min-width: 0;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 84%, transparent);
+  color: var(--app-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-surface-3) 44%, transparent);
+}
+
+.form input::placeholder,
+.addEmojiForm input::placeholder,
+.customEmojiForm input::placeholder,
+.roleForm input::placeholder {
+  color: var(--app-text-muted);
+}
+
+.uploadBox,
+.fileButton {
+  position: relative;
+  min-height: 74px;
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--app-border) 80%, var(--app-text-muted));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 62%, transparent);
+  cursor: pointer;
+}
+
+.uploadBox strong {
+  color: var(--app-text);
+}
+
+.uploadBox span {
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 520;
+}
+
+.uploadBox input,
+.fileButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.buttonRow,
+.addEmojiForm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.buttonRow {
+  flex-wrap: wrap;
+}
+
+.saveButton,
+.secondaryButton,
+.addEmojiForm button,
+.customEmojiForm button,
+.roleForm button,
+.emojiItem button,
+.roleItem button,
+.customEmojiItem button,
+.fileButton {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 760;
+  box-shadow: var(--app-shadow-small);
+  transition:
+    background 180ms steps(4, end),
+    color 180ms steps(4, end),
+    transform 190ms cubic-bezier(0.2, 1.45, 0.22, 1),
+    box-shadow 190ms cubic-bezier(0.2, 1.2, 0.22, 1);
+}
+
+.saveButton,
+.addEmojiForm button,
+.customEmojiForm button,
+.roleForm button {
+  background: var(--app-accent);
+  color: #fffaf2;
+}
+
+.secondaryButton,
+.fileButton {
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+
+.emojiItem button,
+.roleItem button,
+.customEmojiItem button {
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+}
+
+.saveButton:hover,
+.addEmojiForm button:hover,
+.customEmojiForm button:hover,
+.roleForm button:hover {
+  transform: translate(-1px, -1px);
+  background: var(--app-accent-strong);
+}
+
+.secondaryButton:hover,
+.fileButton:hover {
+  transform: translate(-1px, -1px);
+  background: var(--app-accent-soft);
+}
+
+.emojiItem button:hover,
+.roleItem button:hover,
+.customEmojiItem button:hover {
+  transform: translate(-1px, -1px);
+  background: color-mix(in srgb, var(--app-danger-soft) 74%, var(--app-surface));
+}
+
+.saveButton:disabled,
+.secondaryButton:disabled,
+.customEmojiForm button:disabled,
+.roleForm button:disabled,
+.dangerButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+}
+
+.emojiItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 68%, transparent);
+}
+
+.emojiItem span {
+  font-size: 23px;
+}
+
+.addEmojiForm {
+  margin-top: 12px;
+}
+
+.addEmojiForm input {
+  flex: 1;
+}
+
+.roleLayout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
+}
+
+.roleColumn,
+.memberRoleList {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.roleForm {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 48px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.colorPicker {
+  position: relative;
+  width: 48px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 72%, transparent);
+  box-shadow: var(--app-shadow-small);
+  cursor: pointer;
+}
+
+.colorPicker span,
+.roleSwatch {
+  display: block;
+  border: 1px solid color-mix(in srgb, var(--role-color) 70%, var(--app-border));
+  border-radius: 6px;
+  background: var(--role-color);
+}
+
+.colorPicker span {
+  width: 26px;
+  height: 26px;
+}
+
+.colorPicker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.roleList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.roleItem,
+.memberRoleItem {
+  min-width: 0;
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 66%, transparent);
+}
+
+.roleItem {
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+}
+
+.roleSwatch {
+  width: 26px;
+  height: 26px;
+}
+
+.roleItem strong,
+.memberRoleItem strong {
+  display: block;
+  overflow: hidden;
+  color: var(--role-color) !important;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roleItem small,
+.memberRoleItem span {
+  display: block;
+  overflow: hidden;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberRoleItem {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px);
+}
+
+.memberRoleItem select:disabled {
+  cursor: not-allowed;
+  opacity: 0.74;
+}
+
+.customEmojiForm {
+  grid-template-columns: minmax(160px, 1fr) auto auto;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.fileButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.customEmojiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.customEmojiItem {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 68%, transparent);
+}
+
+.customEmojiItem img {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+
+.customEmojiItem div {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.customEmojiItem strong {
+  overflow: hidden;
+  color: var(--app-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status,
+.empty {
+  color: var(--app-text-muted);
+}
+
+.status {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 82%, transparent);
+}
+
+.dangerSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-color: color-mix(in srgb, var(--app-danger) 38%, var(--app-border));
+  background: color-mix(in srgb, var(--app-danger-soft) 28%, var(--app-surface));
+}
+
+.dangerSection p {
+  margin-bottom: 0;
+}
+
+.dangerButton {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--app-danger) 48%, var(--app-border));
+  border-radius: 8px;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 800;
+  box-shadow: var(--app-shadow-small);
+  transition:
+    background 180ms steps(4, end),
+    transform 190ms cubic-bezier(0.2, 1.45, 0.22, 1),
+    box-shadow 190ms cubic-bezier(0.2, 1.2, 0.22, 1);
+}
+
+.dangerButton:hover {
+  transform: translate(-1px, -1px);
+  background: color-mix(in srgb, var(--app-danger-soft) 70%, var(--app-surface));
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--app-danger) 14%, transparent);
+}
+
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 20;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 44%, var(--app-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 92%, transparent);
+  color: var(--app-text);
+  font-weight: 800;
+  box-shadow: var(--app-shadow-pixel);
+  backdrop-filter: blur(8px);
+  animation: toastPop 420ms cubic-bezier(0.2, 1.35, 0.22, 1);
+}
+
+@keyframes toastPop {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+
+  62% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.025);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.skeletonButton,
+.skeletonBlock,
+.skeletonLine {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--app-surface-3) 54%, transparent) !important;
+  color: transparent !important;
+}
+
+.skeletonButton {
+  width: 126px;
+}
+
+.skeletonLine {
+  display: block;
+}
+
+.skeletonTitle {
+  width: min(360px, 70vw);
+  height: 34px;
+}
+
+.skeletonMeta {
+  width: min(440px, 72vw);
+  height: 14px;
+  margin-top: 10px;
+}
+
+.skeletonSection {
+  pointer-events: none;
+}
+
+.skeletonSectionTitle {
+  width: 170px;
+  height: 22px;
+}
+
+.skeletonSectionText {
+  width: min(420px, 78%);
+  height: 13px;
+  margin-top: 10px;
+}
+
+.skeletonInput {
+  width: 100%;
+  height: 42px;
+  margin-top: 18px;
+}
+
+.skeletonInputShort {
+  width: min(220px, 48%);
+  height: 38px;
+  margin-top: 12px;
+}
+
+.skeletonButton::after,
+.skeletonBlock::after,
+.skeletonLine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--app-surface) 66%, transparent),
+    transparent
+  );
+  animation: settingsSkeletonShimmer 1.2s steps(8, end) infinite;
+}
+
+@keyframes settingsSkeletonShimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (max-width: 820px) {
+  .page {
+    padding: 16px;
+  }
+
+  .settingsGrid,
+  .customEmojiForm,
+  .roleLayout,
+  .roleForm,
+  .memberRoleItem {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    grid-template-columns: 1fr;
+  }
+
+  .buttonRow,
+  .addEmojiForm,
+  .dangerSection {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .saveButton,
+  .secondaryButton,
+  .addEmojiForm button,
+  .customEmojiForm button,
+  .roleForm button,
+  .fileButton {
+    width: 100%;
+  }
+
+  .dangerButton {
+    width: 100%;
+  }
+}

@@ -79,7 +79,7 @@ export default function LoginPage() {
   return (
     <main className={styles.page}>
       <section className={styles.card}>
-        <h1>Friend Chat</h1>
+        <h1>Welcome to Bubbles!</h1>
         <p>Sign in or create an account.</p>
 
         <input
