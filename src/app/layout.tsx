@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Bubbles",
-  description: "Private friend chat",
+  description: "Join now or never >:(",
 };
 
 export default function RootLayout({
