@@ -2,7 +2,6 @@
 
 import {
   Fragment,
-  type CSSProperties,
   useCallback,
   useEffect,
   useMemo,
@@ -15,54 +14,44 @@ import type { DailyCall } from "@daily-co/daily-js";
 import {
   getDefaultRole,
   getRoleOptions,
+  roleColorStyle,
   resolveServerRole,
   type ServerRole,
 } from "@/lib/roles";
+import {
+  cleanChannelName,
+  formatMessageDay,
+  getAvatarInitial,
+  getProfileName,
+  getProfileUsername,
+  getReplyPreviewText,
+  getTypingText,
+  groupReactionsByMessage,
+  isNewMessageDay,
+  mapMessagesById,
+  MESSAGE_SELECT,
+  normalizeChannel,
+  shouldMergeMessage,
+  sortChannels,
+  type Channel,
+  type Message,
+  type MessageReaction,
+  type Profile,
+} from "@/lib/chat";
+import {
+  ALLOWED_MESSAGE_MEDIA_TYPES,
+  FALLBACK_REACTION_EMOJIS,
+  MAX_MESSAGE_MEDIA_SIZE,
+  cleanFileName,
+  validateFile,
+} from "@/lib/media";
 import { createClient } from "@/lib/supabase/client";
+import {
+  getSavedResolvedTheme,
+  toggleSavedResolvedTheme,
+  type ResolvedThemeMode,
+} from "@/lib/theme";
 import styles from "./chat.module.css";
-
-type Message = {
-  id: string;
-  channel_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  edited_at: string | null;
-  reply_to_message_id: string | null;
-  media_url: string | null;
-  media_path: string | null;
-  media_name: string | null;
-  media_type: string | null;
-  media_size: number | null;
-};
-
-type Channel = {
-  id: string;
-  server_id: string;
-  name: string;
-  sort_order: number;
-  type: "text" | "voice";
-};
-
-type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  avatar_static_url: string | null;
-  banner_url: string | null;
-  bio: string | null;
-  status: string | null;
-};
-
-type MessageReaction = {
-  id: string;
-  message_id: string;
-  server_id: string;
-  user_id: string;
-  emoji: string;
-  created_at: string;
-};
 
 type ServerSettings = {
   server_id: string;
@@ -83,17 +72,6 @@ type UploadedMedia = {
   media_type: string;
   media_size: number;
 };
-
-type Theme = "light" | "dark";
-type ThemeFamily = "claude" | "sage" | "lavender";
-
-function isThemeFamily(value: string | null): value is ThemeFamily {
-  return value === "claude" || value === "sage" || value === "lavender";
-}
-
-function roleColorStyle(color: string) {
-  return { "--role-color": color } as CSSProperties;
-}
 
 function getCachedChannels() {
   if (typeof window === "undefined") return [];
@@ -136,17 +114,6 @@ function getSavedNotificationsEnabled() {
   );
 }
 
-function getSavedTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
-
-  const savedTheme = window.localStorage.getItem("bubbles-theme") as Theme | null;
-  if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
-
 function getNotificationsPermission(): NotificationPermission {
   if (typeof window === "undefined" || !("Notification" in window)) {
     return "default";
@@ -155,23 +122,7 @@ function getNotificationsPermission(): NotificationPermission {
   return Notification.permission;
 }
 
-const FALLBACK_REACTION_EMOJIS = ["👍", "😂", "❤️", "🔥", "😭", "🎉"];
 const MESSAGE_MEDIA_BUCKET = "message-media";
-const MAX_MEDIA_SIZE = 25 * 1024 * 1024;
-const MERGE_WINDOW_MS = 1000 * 60 * 3;
-
-const ALLOWED_MEDIA_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-];
-
-const MESSAGE_SELECT =
-  "id, channel_id, user_id, content, created_at, edited_at, reply_to_message_id, media_url, media_path, media_name, media_type, media_size";
 
 export default function ChannelPage() {
   const params = useParams<{ channelId: string }>();
@@ -186,7 +137,8 @@ export default function ChannelPage() {
   const dailyContainerRef = useRef<HTMLDivElement | null>(null);
   const dailyCallRef = useRef<DailyCall | null>(null);
 
-  const [theme, setTheme] = useState<Theme>(getSavedTheme);
+  const [theme, setTheme] =
+    useState<ResolvedThemeMode>(getSavedResolvedTheme);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageReactions, setMessageReactions] = useState<MessageReaction[]>(
@@ -470,10 +422,7 @@ export default function ChannelPage() {
         return;
       }
 
-      const loadedChannel = {
-        ...channelData,
-        type: channelData.type ?? "text",
-      } as Channel;
+      const loadedChannel = normalizeChannel(channelData as Channel);
 
       if (loadedChannel.type !== "text") {
         setStatus("Open a text channel to view chat.");
@@ -528,10 +477,8 @@ export default function ChannelPage() {
       }
 
       const nextChannels =
-        channelList?.map((channel) => ({
-          ...channel,
-          type: channel.type ?? "text",
-        })) ?? [];
+        channelList?.map((channel) => normalizeChannel(channel as Channel)) ??
+        [];
 
       setServerChannels(nextChannels as Channel[]);
 
@@ -956,26 +903,7 @@ export default function ChannelPage() {
     };
   }, [voiceCall]);
 
-  function cleanChannelName(name: string) {
-    return name
-      .trim()
-      .replace(/^#+/, "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-_]/g, "")
-      .slice(0, 32);
-  }
-
-  function sortChannels(channels: Channel[]) {
-    return [...channels].sort((a, b) => {
-      if (a.sort_order === b.sort_order) {
-        return a.name.localeCompare(b.name);
-      }
-
-      return a.sort_order - b.sort_order;
-    });
-  }
+  const roleOptions = useMemo(() => getRoleOptions(serverRoles), [serverRoles]);
 
   function cacheChannels(channels: Channel[]) {
     window.sessionStorage.setItem("bubbles-channels", JSON.stringify(channels));
@@ -1014,46 +942,12 @@ export default function ChannelPage() {
     );
   }
 
-  function getProfileName(userId: string) {
-    const profile = profiles[userId];
-
-    if (!profile) {
-      return "Unknown user";
-    }
-
-    return profile.display_name || profile.username;
-  }
-
-  function getProfileUsername(userId: string) {
-    const profile = profiles[userId];
-
-    if (!profile) {
-      return "@unknown";
-    }
-
-    return `@${profile.username}`;
-  }
-
   function getRoleForUser(userId: string) {
     if (userId && userId === serverOwnerId) {
       return getDefaultRole("owner");
     }
 
     return resolveServerRole(roleByUserId[userId], serverRoles);
-  }
-
-  function getRoleSortIndex(userId: string) {
-    const role = getRoleForUser(userId);
-    const options = getRoleOptions(serverRoles);
-    const index = options.findIndex((option) => option.id === role.id);
-
-    return index === -1 ? options.length : index;
-  }
-
-  function getAvatarInitial(userId: string) {
-    const name = getProfileName(userId);
-
-    return name.charAt(0).toUpperCase() || "?";
   }
 
   function getAvatarUrl(userId: string) {
@@ -1074,14 +968,14 @@ export default function ChannelPage() {
     const isHovered = hoveredAvatarKey === avatarKey;
 
     if (!animatedUrl && !staticUrl) {
-      return getAvatarInitial(userId);
+      return getAvatarInitial(profiles, userId);
     }
 
     return (
       <img
         className={styles.avatarImage}
         src={isHovered ? animatedUrl : staticUrl}
-        alt={`${getProfileName(userId)} avatar`}
+        alt={`${getProfileName(profiles, userId)} avatar`}
       />
     );
   }
@@ -1109,97 +1003,10 @@ export default function ChannelPage() {
   }
 
   async function copyProfileUsername(userId: string) {
-    const username = getProfileUsername(userId);
+    const username = getProfileUsername(profiles, userId);
 
     await navigator.clipboard.writeText(username);
     setStatus(`${username} copied.`);
-  }
-
-  function getTypingText() {
-    const typingUserIds = Object.keys(typingUsers).filter(
-      (userId) => userId !== currentUserId
-    );
-
-    if (typingUserIds.length === 0) return "";
-
-    const names = typingUserIds.map((userId) => getProfileName(userId));
-
-    if (names.length === 1) {
-      return `${names[0]} is typing...`;
-    }
-
-    if (names.length === 2) {
-      return `${names[0]} and ${names[1]} are typing...`;
-    }
-
-    return `${names[0]}, ${names[1]}, and ${
-      names.length - 2
-    } others are typing...`;
-  }
-
-  function getReactionGroups(messageId: string) {
-    const reactions = messageReactions.filter(
-      (reaction) => reaction.message_id === messageId
-    );
-
-    const groups = new Map<
-      string,
-      {
-        emoji: string;
-        count: number;
-        reactedByCurrentUser: boolean;
-      }
-    >();
-
-    for (const reaction of reactions) {
-      const existing = groups.get(reaction.emoji);
-
-      if (existing) {
-        existing.count += 1;
-
-        if (reaction.user_id === currentUserId) {
-          existing.reactedByCurrentUser = true;
-        }
-
-        continue;
-      }
-
-      groups.set(reaction.emoji, {
-        emoji: reaction.emoji,
-        count: 1,
-        reactedByCurrentUser: reaction.user_id === currentUserId,
-      });
-    }
-
-    return Array.from(groups.values());
-  }
-
-  function getReplyMessage(message: Message) {
-    if (!message.reply_to_message_id) return null;
-
-    return (
-      messages.find((item) => item.id === message.reply_to_message_id) ?? null
-    );
-  }
-
-  function getReplyPreviewText(message: Message) {
-    if (message.content.trim()) {
-      return message.content;
-    }
-
-    if (message.media_type?.startsWith("image/")) {
-      return "Image";
-    }
-
-    if (message.media_type?.startsWith("video/")) {
-      return "Video";
-    }
-
-    if (message.media_name) {
-      return message.media_name;
-    }
-
-    return "Message";
   }
 
   function scrollToMessage(messageId: string) {
@@ -1217,53 +1024,6 @@ export default function ChannelPage() {
     window.setTimeout(() => {
       element.classList.remove(styles.highlightMessage);
     }, 1200);
-  }
-
-  function shouldMergeMessage(message: Message, index: number) {
-    if (index === 0) return false;
-    if (message.reply_to_message_id) return false;
-
-    const previousMessage = messages[index - 1];
-
-    if (!previousMessage) return false;
-    if (previousMessage.user_id !== message.user_id) return false;
-
-    const currentTime = new Date(message.created_at).getTime();
-    const previousTime = new Date(previousMessage.created_at).getTime();
-
-    const difference = currentTime - previousTime;
-
-    return difference >= 0 && difference <= MERGE_WINDOW_MS;
-  }
-
-  function isNewMessageDay(message: Message, index: number) {
-    if (index === 0) return true;
-
-    const previousMessage = messages[index - 1];
-
-    if (!previousMessage) return true;
-
-    return (
-      new Date(message.created_at).toDateString() !==
-      new Date(previousMessage.created_at).toDateString()
-    );
-  }
-
-  function formatMessageDay(value: string) {
-    const date = new Date(value);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) return "Today";
-    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-
-    return date.toLocaleDateString([], {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-      year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
-    });
   }
 
   function startReply(message: Message) {
@@ -1309,24 +1069,7 @@ export default function ChannelPage() {
   }
 
   function toggleTheme() {
-    setTheme((current) => {
-      const nextTheme = current === "dark" ? "light" : "dark";
-      const savedFamily = window.localStorage.getItem("bubbles-theme-family");
-      const family = isThemeFamily(savedFamily) ? savedFamily : "claude";
-
-      window.localStorage.setItem("bubbles-theme", nextTheme);
-      window.localStorage.setItem("bubbles-theme-mode", nextTheme);
-      window.localStorage.setItem("bubbles-theme-family", family);
-
-      for (const element of [document.documentElement, document.body]) {
-        element.dataset.bubblesThemeFamily = family;
-        element.dataset.bubblesThemeMode = nextTheme;
-        element.dataset.bubblesResolvedMode = nextTheme;
-        element.dataset.bubblesTheme = `${family}-${nextTheme}`;
-      }
-
-      return nextTheme;
-    });
+    setTheme(toggleSavedResolvedTheme());
   }
 
   async function toggleNotifications() {
@@ -1372,7 +1115,7 @@ export default function ChannelPage() {
     if (Notification.permission !== "granted") return;
     if (!document.hidden && document.hasFocus()) return;
 
-    const author = getProfileName(message.user_id);
+    const author = getProfileName(profiles, message.user_id);
     const channelName = getChannelName(message.channel_id);
 
     const notification = new Notification(`${author} in #${channelName}`, {
@@ -1385,21 +1128,6 @@ export default function ChannelPage() {
       window.location.href = `/channels/${message.channel_id}`;
       notification.close();
     };
-  }
-
-  function cleanFileName(fileName: string) {
-    const parts = fileName.split(".");
-    const extension = parts.length > 1 ? parts.pop() : "";
-    const baseName = parts.join(".") || "media";
-
-    const safeBaseName = baseName
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-_]/g, "")
-      .slice(0, 48);
-
-    return `${safeBaseName || "media"}${extension ? `.${extension}` : ""}`;
   }
 
   function clearSelectedMedia() {
@@ -1419,13 +1147,15 @@ export default function ChannelPage() {
 
     if (!file) return;
 
-    if (!ALLOWED_MEDIA_TYPES.includes(file.type)) {
-      setStatus("Please choose a supported image or video file.");
-      return;
-    }
+    const validationError = validateFile(file, {
+      allowedTypes: ALLOWED_MESSAGE_MEDIA_TYPES,
+      maxSize: MAX_MESSAGE_MEDIA_SIZE,
+      typeMessage: "Please choose a supported image or video file.",
+      sizePrefix: "Media",
+    });
 
-    if (file.size > MAX_MEDIA_SIZE) {
-      setStatus("Media must be smaller than 25MB.");
+    if (validationError) {
+      setStatus(validationError);
       return;
     }
 
@@ -1442,17 +1172,19 @@ export default function ChannelPage() {
     userId: string,
     file: File
   ): Promise<UploadedMedia | null> {
-    if (!ALLOWED_MEDIA_TYPES.includes(file.type)) {
-      setStatus("Please choose a supported image or video file.");
+    const validationError = validateFile(file, {
+      allowedTypes: ALLOWED_MESSAGE_MEDIA_TYPES,
+      maxSize: MAX_MESSAGE_MEDIA_SIZE,
+      typeMessage: "Please choose a supported image or video file.",
+      sizePrefix: "Media",
+    });
+
+    if (validationError) {
+      setStatus(validationError);
       return null;
     }
 
-    if (file.size > MAX_MEDIA_SIZE) {
-      setStatus("Media must be smaller than 25MB.");
-      return null;
-    }
-
-    const safeFileName = cleanFileName(file.name);
+    const safeFileName = cleanFileName(file.name, "media");
     const filePath = `${userId}/${channelId}/${crypto.randomUUID()}-${safeFileName}`;
 
     const { error } = await supabase.storage
@@ -1953,10 +1685,10 @@ export default function ChannelPage() {
     }
 
     if (channel) {
-      const newChannel = {
-        ...channel,
+      const newChannel = normalizeChannel({
+        ...(channel as Channel),
         type: channel.type ?? creatingChannelType,
-      } as Channel;
+      });
 
       setServerChannels((current) => {
         const nextChannels = sortChannels([...current, newChannel]);
@@ -2133,23 +1865,53 @@ export default function ChannelPage() {
     }
   }
 
-  const sortedServerChannels = sortChannels(serverChannels);
-  const textChannels = sortedServerChannels.filter(
-    (channel) => channel.type === "text"
+  const sortedServerChannels = useMemo(
+    () => sortChannels(serverChannels),
+    [serverChannels]
   );
-  const voiceChannels = sortedServerChannels.filter(
-    (channel) => channel.type === "voice"
+  const textChannels = useMemo(
+    () => sortedServerChannels.filter((channel) => channel.type === "text"),
+    [sortedServerChannels]
   );
+  const voiceChannels = useMemo(
+    () => sortedServerChannels.filter((channel) => channel.type === "voice"),
+    [sortedServerChannels]
+  );
+  const messageById = useMemo(() => mapMessagesById(messages), [messages]);
+  const reactionGroupsByMessage = useMemo(
+    () => groupReactionsByMessage(messageReactions, currentUserId),
+    [currentUserId, messageReactions]
+  );
+  const sortedOnlineUserIds = useMemo(
+    () => {
+      function getSortIndex(userId: string) {
+        const role =
+          userId === serverOwnerId
+            ? getDefaultRole("owner")
+            : resolveServerRole(roleByUserId[userId], serverRoles);
+        const index = roleOptions.findIndex((option) => option.id === role.id);
 
-  const sortedOnlineUserIds = [...onlineUserIds].sort((a, b) => {
-    const roleSort = getRoleSortIndex(a) - getRoleSortIndex(b);
+        return index === -1 ? roleOptions.length : index;
+      }
 
-    if (roleSort !== 0) return roleSort;
+      return (
+      [...onlineUserIds].sort((a, b) => {
+        const roleSort = getSortIndex(a) - getSortIndex(b);
 
-    return getProfileName(a).localeCompare(getProfileName(b));
-  });
+        if (roleSort !== 0) return roleSort;
 
-  const typingText = getTypingText();
+        return getProfileName(profiles, a).localeCompare(
+          getProfileName(profiles, b)
+        );
+      })
+      );
+    },
+    [onlineUserIds, profiles, roleByUserId, roleOptions, serverOwnerId, serverRoles]
+  );
+  const typingText = useMemo(
+    () => getTypingText(typingUsers, currentUserId, profiles),
+    [currentUserId, profiles, typingUsers]
+  );
   const previewProfile = profilePreview
     ? profiles[profilePreview.userId]
     : null;
@@ -2580,10 +2342,12 @@ export default function ChannelPage() {
         <div className={styles.messages}>
           {messages.map((message, index) => {
             const isEditing = editingMessageId === message.id;
-            const reactionGroups = getReactionGroups(message.id);
+            const reactionGroups = reactionGroupsByMessage.get(message.id) ?? [];
             const messageAvatarKey = `message-${message.id}`;
-            const isMerged = shouldMergeMessage(message, index);
-            const replyMessage = getReplyMessage(message);
+            const isMerged = shouldMergeMessage(messages, index);
+            const replyMessage = message.reply_to_message_id
+              ? messageById.get(message.reply_to_message_id) ?? null
+              : null;
             const isReactionMenuOpen =
               messageActionMenu?.messageId === message.id &&
               messageActionMenu.type === "reactions";
@@ -2591,7 +2355,7 @@ export default function ChannelPage() {
               messageActionMenu?.messageId === message.id &&
               messageActionMenu.type === "more";
             const messageRole = getRoleForUser(message.user_id);
-            const showDaySeparator = isNewMessageDay(message, index);
+            const showDaySeparator = isNewMessageDay(messages, index);
             const isPendingMessage = pendingMessageIds.has(message.id);
 
             return (
@@ -2731,7 +2495,7 @@ export default function ChannelPage() {
                       onClick={(event) =>
                         openProfilePreview(event, message.user_id)
                       }
-                      title={`View ${getProfileName(message.user_id)}`}
+                      title={`View ${getProfileName(profiles, message.user_id)}`}
                     >
                       {renderHoverAvatar(message.user_id, messageAvatarKey)}
                     </button>
@@ -2744,7 +2508,7 @@ export default function ChannelPage() {
                           className={styles.roleName}
                           style={roleColorStyle(messageRole.color)}
                         >
-                          {getProfileName(message.user_id)}
+                          {getProfileName(profiles, message.user_id)}
                         </strong>
                         <span
                           className={styles.roleBadge}
@@ -2780,7 +2544,7 @@ export default function ChannelPage() {
                             getRoleForUser(replyMessage.user_id).color
                           )}
                         >
-                          {getProfileName(replyMessage.user_id)}
+                          {getProfileName(profiles, replyMessage.user_id)}
                         </strong>
                         <span className={styles.replyPreviewText}>
                           {getReplyPreviewText(replyMessage)}
@@ -2863,7 +2627,9 @@ export default function ChannelPage() {
           {replyingToMessage && (
             <div className={styles.replyComposer}>
               <div className={styles.replyComposerText}>
-                <strong>Replying to {getProfileName(replyingToMessage.user_id)}</strong>
+                <strong>
+                  Replying to {getProfileName(profiles, replyingToMessage.user_id)}
+                </strong>
                 <span className={styles.replyComposerPreview}>
                   {getReplyPreviewText(replyingToMessage)}
                 </span>
@@ -2952,7 +2718,7 @@ export default function ChannelPage() {
                     onMouseEnter={() => setHoveredAvatarKey(memberAvatarKey)}
                     onMouseLeave={() => setHoveredAvatarKey("")}
                     onClick={(event) => openProfilePreview(event, userId)}
-                    title={`View ${getProfileName(userId)}`}
+                    title={`View ${getProfileName(profiles, userId)}`}
                   >
                     {renderHoverAvatar(userId, memberAvatarKey)}
                     <span className={styles.onlineDot} />
@@ -2963,9 +2729,9 @@ export default function ChannelPage() {
                       className={styles.roleName}
                       style={roleColorStyle(memberRole.color)}
                     >
-                      {getProfileName(userId)}
+                      {getProfileName(profiles, userId)}
                     </strong>
-                    <span>{getProfileUsername(userId)}</span>
+                    <span>{getProfileUsername(profiles, userId)}</span>
                     <small
                       className={styles.memberRole}
                       style={roleColorStyle(memberRole.color)}
@@ -2992,10 +2758,10 @@ export default function ChannelPage() {
                 <img
                   className={styles.avatarImage}
                   src={getAvatarUrl(currentUserId)}
-                  alt={`${getProfileName(currentUserId)} avatar`}
+                  alt={`${getProfileName(profiles, currentUserId)} avatar`}
                 />
               ) : currentUserId ? (
-                getAvatarInitial(currentUserId)
+                getAvatarInitial(profiles, currentUserId)
               ) : (
                 "?"
               )}
@@ -3011,10 +2777,12 @@ export default function ChannelPage() {
                   : undefined
               }
             >
-              {currentUserId ? getProfileName(currentUserId) : "Loading"}
+              {currentUserId ? getProfileName(profiles, currentUserId) : "Loading"}
             </strong>
             <span>
-              {currentUserId ? getProfileUsername(currentUserId) : "@loading"}
+              {currentUserId
+                ? getProfileUsername(profiles, currentUserId)
+                : "@loading"}
             </span>
           </div>
 
@@ -3071,10 +2839,10 @@ export default function ChannelPage() {
                 <img
                   className={styles.avatarImage}
                   src={getAvatarUrl(profilePreview.userId)}
-                  alt={`${getProfileName(profilePreview.userId)} avatar`}
+                  alt={`${getProfileName(profiles, profilePreview.userId)} avatar`}
                 />
               ) : (
-                getAvatarInitial(profilePreview.userId)
+                getAvatarInitial(profiles, profilePreview.userId)
               )}
               <span
                 className={`${styles.profilePreviewDot} ${
@@ -3085,9 +2853,9 @@ export default function ChannelPage() {
 
             <div className={styles.profilePreviewIdentity}>
               <strong className={styles.roleName}>
-                {getProfileName(profilePreview.userId)}
+                {getProfileName(profiles, profilePreview.userId)}
               </strong>
-              <span>{getProfileUsername(profilePreview.userId)}</span>
+              <span>{getProfileUsername(profiles, profilePreview.userId)}</span>
             </div>
 
             <div className={styles.profilePreviewRole}>

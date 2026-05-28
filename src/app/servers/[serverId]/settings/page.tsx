@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import ThemeSettings from "@/app/ThemeSettings";
@@ -10,9 +10,19 @@ import {
   cleanRoleName,
   getRoleOptions,
   normalizeRoleColor,
+  roleColorStyle,
   resolveServerRole,
   type ServerRole,
 } from "@/lib/roles";
+import {
+  ALLOWED_IMAGE_TYPES,
+  FALLBACK_REACTION_EMOJIS,
+  MAX_CUSTOM_EMOJI_SIZE,
+  MAX_SERVER_AVATAR_SIZE,
+  cleanEmojiName,
+  cleanFileName,
+  validateFile,
+} from "@/lib/media";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./settings.module.css";
 
@@ -59,40 +69,6 @@ type MemberProfile = {
 };
 
 const SERVER_ASSETS_BUCKET = "server-assets";
-const FALLBACK_REACTION_EMOJIS = ["👍", "😂", "❤️", "🔥", "😭", "🎉"];
-const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
-const MAX_EMOJI_SIZE = 2 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-
-function cleanFileName(fileName: string) {
-  const parts = fileName.split(".");
-  const extension = parts.length > 1 ? parts.pop() : "";
-  const baseName = parts.join(".") || "image";
-
-  const safeBaseName = baseName
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-_]/g, "")
-    .slice(0, 48);
-
-  return `${safeBaseName || "image"}${extension ? `.${extension}` : ""}`;
-}
-
-function cleanEmojiName(name: string) {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/^:+|:+$/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-_]/g, "")
-    .slice(0, 32);
-}
-
-function roleColorStyle(color: string) {
-  return { "--role-color": color } as CSSProperties;
-}
-
 export default function ServerSettingsPage() {
   const params = useParams<{ serverId: string }>();
   const serverId = params.serverId;
@@ -282,28 +258,23 @@ export default function ServerSettingsPage() {
     loadSettings();
   }, [serverId, supabase]);
 
-  function validateImageFile(file: File, maxSize: number) {
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setStatus("Please choose a PNG, JPG, WebP, or GIF image.");
-      return false;
-    }
-
-    if (file.size > maxSize) {
-      setStatus(
-        `Image must be smaller than ${(maxSize / 1024 / 1024).toFixed(0)}MB.`
-      );
-      return false;
-    }
-
-    return true;
-  }
-
   function handleAvatarFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
 
     if (!file) return;
-    if (!validateImageFile(file, MAX_AVATAR_SIZE)) return;
+
+    const validationError = validateFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      maxSize: MAX_SERVER_AVATAR_SIZE,
+      typeMessage: "Please choose a PNG, JPG, WebP, or GIF image.",
+      sizePrefix: "Image",
+    });
+
+    if (validationError) {
+      setStatus(validationError);
+      return;
+    }
 
     if (avatarPreviewUrl) {
       URL.revokeObjectURL(avatarPreviewUrl);
@@ -321,7 +292,18 @@ export default function ServerSettingsPage() {
     event.target.value = "";
 
     if (!file) return;
-    if (!validateImageFile(file, MAX_EMOJI_SIZE)) return;
+
+    const validationError = validateFile(file, {
+      allowedTypes: ALLOWED_IMAGE_TYPES,
+      maxSize: MAX_CUSTOM_EMOJI_SIZE,
+      typeMessage: "Please choose a PNG, JPG, WebP, or GIF image.",
+      sizePrefix: "Image",
+    });
+
+    if (validationError) {
+      setStatus(validationError);
+      return;
+    }
 
     setCustomEmojiFile(file);
     setStatus("");
@@ -913,7 +895,8 @@ export default function ServerSettingsPage() {
                   <label className={styles.uploadBox}>
                     <strong>Server avatar</strong>
                     <span>
-                      PNG, JPG, WebP, or GIF. Max {(MAX_AVATAR_SIZE / 1024 / 1024).toFixed(0)}MB.
+                      PNG, JPG, WebP, or GIF. Max{" "}
+                      {(MAX_SERVER_AVATAR_SIZE / 1024 / 1024).toFixed(0)}MB.
                     </span>
                     <input
                       type="file"

@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 export type ServerRole = {
   id: string;
   server_id: string;
@@ -84,4 +86,8 @@ export function getRoleOptions(customRoles: ServerRole[]) {
     })),
     DEFAULT_SERVER_ROLES[1],
   ];
+}
+
+export function roleColorStyle(color: string) {
+  return { "--role-color": color } as CSSProperties;
 }

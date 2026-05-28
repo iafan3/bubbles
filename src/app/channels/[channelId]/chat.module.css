@@ -1733,18 +1733,6 @@
   position: relative;
 }
 
-
-@keyframes bubblesReplyHighlight {
-  0% {
-    background: rgba(250, 204, 21, 0.24);
-  }
-
-  100% {
-    background: transparent;
-  }
-}
-
-
 @keyframes messageIn {
   from {
     opacity: 0;
