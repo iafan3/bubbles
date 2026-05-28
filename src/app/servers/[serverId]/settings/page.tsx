@@ -1,8 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import ThemeSettings from "@/app/ThemeSettings";
+import {
+  DEFAULT_MEMBER_ROLE_ID,
+  DEFAULT_NEW_ROLE_COLOR,
+  cleanRoleName,
+  getRoleOptions,
+  normalizeRoleColor,
+  resolveServerRole,
+  type ServerRole,
+} from "@/lib/roles";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./settings.module.css";
 
@@ -36,6 +46,18 @@ type CustomEmoji = {
   created_at: string;
 };
 
+type ServerMember = {
+  server_id: string;
+  user_id: string;
+  role: string | null;
+};
+
+type MemberProfile = {
+  id: string;
+  username: string;
+  display_name: string | null;
+};
+
 const SERVER_ASSETS_BUCKET = "server-assets";
 const FALLBACK_REACTION_EMOJIS = ["👍", "😂", "❤️", "🔥", "😭", "🎉"];
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
@@ -67,6 +89,10 @@ function cleanEmojiName(name: string) {
     .slice(0, 32);
 }
 
+function roleColorStyle(color: string) {
+  return { "--role-color": color } as CSSProperties;
+}
+
 export default function ServerSettingsPage() {
   const params = useParams<{ serverId: string }>();
   const serverId = params.serverId;
@@ -79,18 +105,28 @@ export default function ServerSettingsPage() {
     FALLBACK_REACTION_EMOJIS
   );
   const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([]);
+  const [serverRoles, setServerRoles] = useState<ServerRole[]>([]);
+  const [serverMembers, setServerMembers] = useState<ServerMember[]>([]);
+  const [memberProfiles, setMemberProfiles] = useState<Record<string, MemberProfile>>({});
 
   const [serverName, setServerName] = useState("");
   const [newReactionEmoji, setNewReactionEmoji] = useState("");
   const [newCustomEmojiName, setNewCustomEmojiName] = useState("");
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleColor, setNewRoleColor] = useState(DEFAULT_NEW_ROLE_COLOR);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [customEmojiFile, setCustomEmojiFile] = useState<File | null>(null);
 
   const [status, setStatus] = useState("Loading server settings...");
+  const [isLoading, setIsLoading] = useState(true);
   const [isSavingServer, setIsSavingServer] = useState(false);
   const [isSavingReactions, setIsSavingReactions] = useState(false);
+  const [isSavingRole, setIsSavingRole] = useState(false);
   const [isUploadingEmoji, setIsUploadingEmoji] = useState(false);
+  const [isDeletingServer, setIsDeletingServer] = useState(false);
+  const [isCreatingInvite, setIsCreatingInvite] = useState(false);
+  const [toast, setToast] = useState("");
 
   const isOwner = Boolean(server && currentUserId && server.owner_id === currentUserId);
 
@@ -104,6 +140,7 @@ export default function ServerSettingsPage() {
 
   useEffect(() => {
     async function loadSettings() {
+      setIsLoading(true);
       setStatus("Loading server settings...");
 
       const {
@@ -126,6 +163,7 @@ export default function ServerSettingsPage() {
 
       if (serverError || !serverData) {
         setStatus(serverError?.message ?? "Could not load server.");
+        setIsLoading(false);
         return;
       }
 
@@ -135,6 +173,7 @@ export default function ServerSettingsPage() {
 
       if (loadedServer.owner_id !== user.id) {
         setStatus("Only the server owner can edit these settings.");
+        setIsLoading(false);
         return;
       }
 
@@ -158,6 +197,7 @@ export default function ServerSettingsPage() {
 
       if (settingsError) {
         setStatus(settingsError.message);
+        setIsLoading(false);
         return;
       }
 
@@ -165,6 +205,61 @@ export default function ServerSettingsPage() {
 
       if (settings?.reaction_emojis?.length) {
         setReactionEmojis(settings.reaction_emojis);
+      }
+
+      let roleStatus = "";
+
+      const { data: roleData, error: roleError } = await supabase
+        .from("server_roles")
+        .select("id, server_id, name, color, sort_order, created_at")
+        .eq("server_id", serverId)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (roleError) {
+        setServerRoles([]);
+        roleStatus = `Role system needs database setup: ${roleError.message}`;
+      } else {
+        setServerRoles((roleData ?? []) as ServerRole[]);
+      }
+
+      const { data: memberData, error: memberError } = await supabase
+        .from("server_members")
+        .select("server_id, user_id, role")
+        .eq("server_id", serverId);
+
+      if (memberError) {
+        setStatus(memberError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      const nextMembers = (memberData ?? []) as ServerMember[];
+      setServerMembers(nextMembers);
+
+      const memberUserIds = nextMembers.map((member) => member.user_id);
+
+      if (memberUserIds.length > 0) {
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, username, display_name")
+          .in("id", memberUserIds);
+
+        if (profileError) {
+          setStatus(profileError.message);
+          setIsLoading(false);
+          return;
+        }
+
+        const nextProfiles: Record<string, MemberProfile> = {};
+
+        for (const profile of profileData ?? []) {
+          nextProfiles[profile.id] = profile;
+        }
+
+        setMemberProfiles(nextProfiles);
+      } else {
+        setMemberProfiles({});
       }
 
       const { data: customEmojiData, error: customEmojiError } = await supabase
@@ -175,11 +270,13 @@ export default function ServerSettingsPage() {
 
       if (customEmojiError) {
         setStatus(customEmojiError.message);
+        setIsLoading(false);
         return;
       }
 
       setCustomEmojis((customEmojiData ?? []) as CustomEmoji[]);
-      setStatus("");
+      setStatus(roleStatus);
+      setIsLoading(false);
     }
 
     loadSettings();
@@ -402,6 +499,112 @@ export default function ServerSettingsPage() {
     setStatus("Reaction picker saved.");
   }
 
+  async function createRole(event: React.FormEvent) {
+    event.preventDefault();
+
+    if (!isOwner) return;
+
+    const cleanName = cleanRoleName(newRoleName);
+
+    if (!cleanName) {
+      setStatus("Role name cannot be empty.");
+      return;
+    }
+
+    setIsSavingRole(true);
+    setStatus("");
+
+    const { data, error } = await supabase
+      .from("server_roles")
+      .insert({
+        server_id: serverId,
+        name: cleanName,
+        color: normalizeRoleColor(newRoleColor),
+        sort_order: serverRoles.length + 1,
+        created_by: currentUserId,
+      })
+      .select("id, server_id, name, color, sort_order, created_at")
+      .single();
+
+    setIsSavingRole(false);
+
+    if (error) {
+      setStatus(error.message);
+      return;
+    }
+
+    setServerRoles((current) => [...current, data as ServerRole]);
+    setNewRoleName("");
+    setNewRoleColor(DEFAULT_NEW_ROLE_COLOR);
+    setStatus(`Role ${cleanName} created.`);
+  }
+
+  async function assignMemberRole(userId: string, roleId: string) {
+    if (!server || !isOwner || userId === server.owner_id) return;
+
+    const { error } = await supabase
+      .from("server_members")
+      .update({ role: roleId })
+      .eq("server_id", serverId)
+      .eq("user_id", userId);
+
+    if (error) {
+      setStatus(error.message);
+      return;
+    }
+
+    setServerMembers((current) =>
+      current.map((member) =>
+        member.user_id === userId ? { ...member, role: roleId } : member
+      )
+    );
+    setStatus("Member role updated.");
+  }
+
+  async function deleteRole(role: ServerRole) {
+    if (!isOwner) return;
+
+    const confirmed = window.confirm(
+      `Delete "${role.name}"? Members with this role will become Members.`
+    );
+
+    if (!confirmed) return;
+
+    setStatus("");
+
+    const { error: memberError } = await supabase
+      .from("server_members")
+      .update({ role: DEFAULT_MEMBER_ROLE_ID })
+      .eq("server_id", serverId)
+      .eq("role", role.id);
+
+    if (memberError) {
+      setStatus(memberError.message);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("server_roles")
+      .delete()
+      .eq("id", role.id)
+      .eq("server_id", serverId);
+
+    if (error) {
+      setStatus(error.message);
+      return;
+    }
+
+    setServerRoles((current) => current.filter((item) => item.id !== role.id));
+    setServerMembers((current) =>
+      current.map((member) =>
+        member.role === role.id
+          ? { ...member, role: DEFAULT_MEMBER_ROLE_ID }
+          : member
+      )
+    );
+    setStatus(`Role ${role.name} deleted.`);
+  }
+
   async function uploadCustomEmoji(event: React.FormEvent) {
     event.preventDefault();
 
@@ -496,14 +699,161 @@ export default function ServerSettingsPage() {
     setStatus(`Custom emoji :${emoji.name}: deleted.`);
   }
 
+  async function createInvite() {
+    if (!server || !isOwner) return;
+
+    setIsCreatingInvite(true);
+    setStatus("");
+    setToast("");
+
+    const code = crypto.randomUUID().slice(0, 8);
+    const inviteUrl = `${window.location.origin}/invite/${code}`;
+
+    const { error } = await supabase.from("invites").insert({
+      server_id: server.id,
+      code,
+      created_by: currentUserId,
+      expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+    });
+
+    setIsCreatingInvite(false);
+
+    if (error) {
+      setStatus(error.message);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setToast("Invite copied!");
+    } catch {
+      setStatus(`Invite created: ${inviteUrl}`);
+      return;
+    }
+
+    window.setTimeout(() => {
+      setToast("");
+    }, 2400);
+  }
+
+  async function deleteServer() {
+    if (!server || !isOwner) return;
+
+    const confirmed = window.confirm(
+      `Delete "${server.name}"? This permanently deletes this server and its channels.`
+    );
+
+    if (!confirmed) return;
+
+    setIsDeletingServer(true);
+    setStatus("");
+
+    const storagePaths = [
+      server.avatar_path,
+      ...customEmojis.map((emoji) => emoji.image_path),
+    ].filter(Boolean) as string[];
+
+    const { error } = await supabase
+      .from("servers")
+      .delete()
+      .eq("id", serverId)
+      .eq("owner_id", currentUserId);
+
+    if (error) {
+      setIsDeletingServer(false);
+      setStatus(error.message);
+      return;
+    }
+
+    if (storagePaths.length > 0) {
+      await supabase.storage.from(SERVER_ASSETS_BUCKET).remove(storagePaths);
+    }
+
+    window.sessionStorage.removeItem("bubbles-channels");
+    window.location.href = "/";
+  }
+
   const avatarSrc = avatarPreviewUrl || server?.avatar_url || "";
+  const roleOptions = getRoleOptions(serverRoles);
+  const assignableRoleOptions = roleOptions.filter((role) => role.id !== "owner");
+  const sortedMembers = [...serverMembers].sort((a, b) => {
+    if (server?.owner_id === a.user_id) return -1;
+    if (server?.owner_id === b.user_id) return 1;
+
+    const aName =
+      memberProfiles[a.user_id]?.display_name ||
+      memberProfiles[a.user_id]?.username ||
+      "Unknown user";
+    const bName =
+      memberProfiles[b.user_id]?.display_name ||
+      memberProfiles[b.user_id]?.username ||
+      "Unknown user";
+
+    return aName.localeCompare(bName);
+  });
+
+  if (isLoading) {
+    return (
+      <main className={styles.page} aria-busy="true">
+        <section className={styles.card}>
+          <div className={styles.topbar}>
+            <Link className={styles.brandLink} href="/">
+              Bubbles
+            </Link>
+            <span className={`${styles.backLink} ${styles.skeletonButton}`} />
+          </div>
+
+          <header className={styles.header}>
+            <span
+              className={`${styles.serverAvatarPreview} ${styles.skeletonBlock}`}
+            />
+            <div>
+              <span className={`${styles.skeletonLine} ${styles.skeletonTitle}`} />
+              <span className={`${styles.skeletonLine} ${styles.skeletonMeta}`} />
+            </div>
+          </header>
+
+          <div className={styles.settingsGrid}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <section
+                className={`${styles.section} ${
+                  index === 0 || index === 2 ? styles.sectionWide : ""
+                } ${styles.skeletonSection}`}
+                key={index}
+              >
+                <span
+                  className={`${styles.skeletonLine} ${styles.skeletonSectionTitle}`}
+                />
+                <span
+                  className={`${styles.skeletonLine} ${styles.skeletonSectionText}`}
+                />
+                <span
+                  className={`${styles.skeletonLine} ${styles.skeletonInput}`}
+                />
+                <span
+                  className={`${styles.skeletonLine} ${styles.skeletonInputShort}`}
+                />
+              </section>
+            ))}
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.page}>
       <section className={styles.card}>
         <div className={styles.topbar}>
-          <Link href={firstTextChannel ? `/channels/${firstTextChannel.id}` : "/"}>
-            ← Back to server
+          <Link className={styles.brandLink} href="/">
+            Bubbles
+          </Link>
+
+          <Link
+            className={styles.backLink}
+            href={firstTextChannel ? `/channels/${firstTextChannel.id}` : "/"}
+          >
+            Back to server
           </Link>
         </div>
 
@@ -526,140 +876,301 @@ export default function ServerSettingsPage() {
 
         {isOwner && (
           <>
-            <section className={styles.section}>
-              <h2>Server overview</h2>
-              <p>Change the server name and avatar shown around Bubbles.</p>
+            <div className={styles.settingsGrid}>
+              <section className={`${styles.section} ${styles.sectionWide}`}>
+                <ThemeSettings />
+              </section>
 
-              <form className={styles.form} onSubmit={saveServerOverview}>
-                <label>
-                  Server name
-                  <input
-                    value={serverName}
-                    onChange={(event) => setServerName(event.target.value)}
-                    maxLength={64}
-                    placeholder="Server name"
-                  />
-                </label>
+              <section className={`${styles.section} ${styles.inviteSection}`}>
+                <h2>Invite link</h2>
+                <p>Create a one-use invite. It is copied to your clipboard automatically.</p>
 
-                <label className={styles.uploadBox}>
-                  <strong>Server avatar</strong>
-                  <span>
-                    PNG, JPG, WebP, or GIF. Max {(MAX_AVATAR_SIZE / 1024 / 1024).toFixed(0)}MB.
-                  </span>
-                  <input
-                    type="file"
-                    accept={ALLOWED_IMAGE_TYPES.join(",")}
-                    onChange={handleAvatarFileChange}
-                  />
-                </label>
+                <button
+                  className={styles.saveButton}
+                  type="button"
+                  onClick={createInvite}
+                  disabled={isCreatingInvite}
+                >
+                  {isCreatingInvite ? "Creating..." : "Create invite"}
+                </button>
+              </section>
 
-                <div className={styles.buttonRow}>
-                  <button
-                    className={styles.saveButton}
-                    type="submit"
-                    disabled={isSavingServer}
-                  >
-                    {isSavingServer ? "Saving..." : "Save overview"}
-                  </button>
+              <section className={styles.section}>
+                <h2>Server overview</h2>
+                <p>Change the server name and avatar shown around Bubbles.</p>
 
-                  {server?.avatar_url && (
+                <form className={styles.form} onSubmit={saveServerOverview}>
+                  <label>
+                    Server name
+                    <input
+                      value={serverName}
+                      onChange={(event) => setServerName(event.target.value)}
+                      maxLength={64}
+                      placeholder="Server name"
+                    />
+                  </label>
+
+                  <label className={styles.uploadBox}>
+                    <strong>Server avatar</strong>
+                    <span>
+                      PNG, JPG, WebP, or GIF. Max {(MAX_AVATAR_SIZE / 1024 / 1024).toFixed(0)}MB.
+                    </span>
+                    <input
+                      type="file"
+                      accept={ALLOWED_IMAGE_TYPES.join(",")}
+                      onChange={handleAvatarFileChange}
+                    />
+                  </label>
+
+                  <div className={styles.buttonRow}>
                     <button
-                      className={styles.secondaryButton}
-                      type="button"
-                      onClick={removeServerAvatar}
+                      className={styles.saveButton}
+                      type="submit"
                       disabled={isSavingServer}
                     >
-                      Remove avatar
+                      {isSavingServer ? "Saving..." : "Save overview"}
                     </button>
-                  )}
-                </div>
-              </form>
-            </section>
 
-            <section className={styles.section}>
-              <h2>Reaction picker</h2>
-              <p>These are the quick reactions shown in the message reaction picker.</p>
-
-              <div className={styles.emojiGrid}>
-                {reactionEmojis.map((emoji) => (
-                  <div className={styles.emojiItem} key={emoji}>
-                    <span>{emoji}</span>
-                    <button type="button" onClick={() => removeReactionEmoji(emoji)}>
-                      Remove
-                    </button>
+                    {server?.avatar_url && (
+                      <button
+                        className={styles.secondaryButton}
+                        type="button"
+                        onClick={removeServerAvatar}
+                        disabled={isSavingServer}
+                      >
+                        Remove avatar
+                      </button>
+                    )}
                   </div>
-                ))}
-              </div>
+                </form>
+              </section>
 
-              <form className={styles.addEmojiForm} onSubmit={addReactionEmoji}>
-                <input
-                  value={newReactionEmoji}
-                  onChange={(event) => setNewReactionEmoji(event.target.value)}
-                  placeholder="Add emoji, e.g. 🫧"
-                  maxLength={16}
-                />
-                <button type="submit">Add</button>
-              </form>
+              <section className={`${styles.section} ${styles.sectionWide}`}>
+                <h2>Roles & colors</h2>
+                <p>
+                  Create server roles and assign colors for names in chat and the member list.
+                </p>
 
-              <button
-                className={styles.saveButton}
-                type="button"
-                onClick={saveReactionEmojis}
-                disabled={isSavingReactions}
-              >
-                {isSavingReactions ? "Saving..." : "Save reaction picker"}
-              </button>
-            </section>
+                <div className={styles.roleLayout}>
+                  <div className={styles.roleColumn}>
+                    <form className={styles.roleForm} onSubmit={createRole}>
+                      <input
+                        value={newRoleName}
+                        onChange={(event) => setNewRoleName(event.target.value)}
+                        placeholder="Role name"
+                        maxLength={32}
+                      />
 
-            <section className={styles.section}>
-              <h2>Custom emojis</h2>
-              <p>Upload server-specific emoji images for future custom reactions and chat UI.</p>
+                      <label
+                        className={styles.colorPicker}
+                        style={roleColorStyle(newRoleColor)}
+                      >
+                        <span />
+                        <input
+                          type="color"
+                          value={newRoleColor}
+                          onChange={(event) => setNewRoleColor(event.target.value)}
+                        />
+                      </label>
 
-              <form className={styles.customEmojiForm} onSubmit={uploadCustomEmoji}>
-                <input
-                  value={newCustomEmojiName}
-                  onChange={(event) => setNewCustomEmojiName(event.target.value)}
-                  placeholder="emoji-name"
-                  maxLength={32}
-                />
+                      <button type="submit" disabled={isSavingRole}>
+                        {isSavingRole ? "Creating..." : "Create role"}
+                      </button>
+                    </form>
 
-                <label className={styles.fileButton}>
-                  {customEmojiFile ? customEmojiFile.name : "Choose image"}
-                  <input
-                    type="file"
-                    accept={ALLOWED_IMAGE_TYPES.join(",")}
-                    onChange={handleCustomEmojiFileChange}
-                  />
-                </label>
+                    <div className={styles.roleList}>
+                      {roleOptions.map((role) => {
+                        const customRole = serverRoles.find(
+                          (item) => item.id === role.id
+                        );
 
-                <button type="submit" disabled={isUploadingEmoji}>
-                  {isUploadingEmoji ? "Uploading..." : "Upload"}
-                </button>
-              </form>
+                        return (
+                          <article
+                            className={styles.roleItem}
+                            key={role.id}
+                            style={roleColorStyle(role.color)}
+                          >
+                            <span className={styles.roleSwatch} />
+                            <div>
+                              <strong>{role.name}</strong>
+                              <small>
+                                {role.isDefault ? "Built in" : "Custom"}
+                              </small>
+                            </div>
 
-              <div className={styles.customEmojiGrid}>
-                {customEmojis.map((emoji) => (
-                  <article className={styles.customEmojiItem} key={emoji.id}>
-                    <img src={emoji.image_url} alt={`:${emoji.name}:`} />
-                    <div>
-                      <strong>:{emoji.name}:</strong>
-                      <button type="button" onClick={() => deleteCustomEmoji(emoji)}>
-                        Delete
+                            {!role.isDefault && customRole && (
+                              <button
+                                type="button"
+                                onClick={() => deleteRole(customRole)}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className={styles.memberRoleList}>
+                    {sortedMembers.map((member) => {
+                      const profile = memberProfiles[member.user_id];
+                      const memberName =
+                        profile?.display_name || profile?.username || "Unknown user";
+                      const memberUsername = profile?.username
+                        ? `@${profile.username}`
+                        : "@unknown";
+                      const isServerOwner = member.user_id === server?.owner_id;
+                      const memberRole = isServerOwner
+                        ? resolveServerRole("owner", serverRoles)
+                        : resolveServerRole(member.role, serverRoles);
+
+                      return (
+                        <article
+                          className={styles.memberRoleItem}
+                          key={member.user_id}
+                          style={roleColorStyle(memberRole.color)}
+                        >
+                          <div>
+                            <strong>{memberName}</strong>
+                            <span>{memberUsername}</span>
+                          </div>
+
+                          <select
+                            value={isServerOwner ? "owner" : memberRole.id}
+                            onChange={(event) =>
+                              assignMemberRole(member.user_id, event.target.value)
+                            }
+                            disabled={isServerOwner}
+                          >
+                            {(isServerOwner
+                              ? roleOptions
+                              : assignableRoleOptions
+                            ).map((role) => (
+                              <option key={role.id} value={role.id}>
+                                {role.name}
+                              </option>
+                            ))}
+                          </select>
+                        </article>
+                      );
+                    })}
+
+                    {sortedMembers.length === 0 && (
+                      <p className={styles.empty}>No members found.</p>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <section className={styles.section}>
+                <h2>Reaction picker</h2>
+                <p>These are the quick reactions shown in the message reaction picker.</p>
+
+                <div className={styles.emojiGrid}>
+                  {reactionEmojis.map((emoji) => (
+                    <div className={styles.emojiItem} key={emoji}>
+                      <span>{emoji}</span>
+                      <button type="button" onClick={() => removeReactionEmoji(emoji)}>
+                        Remove
                       </button>
                     </div>
-                  </article>
-                ))}
+                  ))}
+                </div>
 
-                {customEmojis.length === 0 && (
-                  <p className={styles.empty}>No custom emojis yet.</p>
-                )}
-              </div>
-            </section>
+                <form className={styles.addEmojiForm} onSubmit={addReactionEmoji}>
+                  <input
+                    value={newReactionEmoji}
+                    onChange={(event) => setNewReactionEmoji(event.target.value)}
+                    placeholder="Add emoji, e.g. 🫧"
+                    maxLength={16}
+                  />
+                  <button type="submit">Add</button>
+                </form>
+
+                <button
+                  className={styles.saveButton}
+                  type="button"
+                  onClick={saveReactionEmojis}
+                  disabled={isSavingReactions}
+                >
+                  {isSavingReactions ? "Saving..." : "Save reaction picker"}
+                </button>
+              </section>
+
+              <section className={`${styles.section} ${styles.sectionWide}`}>
+                <h2>Custom emojis</h2>
+                <p>Upload server-specific emoji images for future custom reactions and chat UI.</p>
+
+                <form className={styles.customEmojiForm} onSubmit={uploadCustomEmoji}>
+                  <input
+                    value={newCustomEmojiName}
+                    onChange={(event) => setNewCustomEmojiName(event.target.value)}
+                    placeholder="emoji-name"
+                    maxLength={32}
+                  />
+
+                  <label className={styles.fileButton}>
+                    {customEmojiFile ? customEmojiFile.name : "Choose image"}
+                    <input
+                      type="file"
+                      accept={ALLOWED_IMAGE_TYPES.join(",")}
+                      onChange={handleCustomEmojiFileChange}
+                    />
+                  </label>
+
+                  <button type="submit" disabled={isUploadingEmoji}>
+                    {isUploadingEmoji ? "Uploading..." : "Upload"}
+                  </button>
+                </form>
+
+                <div className={styles.customEmojiGrid}>
+                  {customEmojis.map((emoji) => (
+                    <article className={styles.customEmojiItem} key={emoji.id}>
+                      <img src={emoji.image_url} alt={`:${emoji.name}:`} />
+                      <div>
+                        <strong>:{emoji.name}:</strong>
+                        <button type="button" onClick={() => deleteCustomEmoji(emoji)}>
+                          Delete
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+
+                  {customEmojis.length === 0 && (
+                    <p className={styles.empty}>No custom emojis yet.</p>
+                  )}
+                </div>
+              </section>
+
+              <section
+                className={`${styles.section} ${styles.sectionWide} ${styles.dangerSection}`}
+              >
+                <div>
+                  <h2>Dangerous controls</h2>
+                  <p>
+                    Delete this server permanently. This removes the server for
+                    everyone and sends you back to the homepage.
+                  </p>
+                </div>
+
+                <button
+                  className={styles.dangerButton}
+                  type="button"
+                  onClick={deleteServer}
+                  disabled={isDeletingServer}
+                >
+                  {isDeletingServer ? "Deleting..." : "Delete server"}
+                </button>
+              </section>
+            </div>
 
             {status && <p className={styles.status}>{status}</p>}
           </>
         )}
       </section>
+
+      {toast && <div className={styles.toast}>{toast}</div>}
     </main>
   );
 }

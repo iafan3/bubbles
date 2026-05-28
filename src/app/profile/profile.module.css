@@ -1,12 +1,9 @@
 .page {
   min-height: 100vh;
   padding: 32px;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(217, 119, 87, 0.18), transparent 32%),
-    #f7f3ed;
-  color: #2b2118;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  background: transparent;
+  color: var(--app-text);
+  font-family: var(--font-ui);
 }
 
 .profileShell,
@@ -24,7 +21,7 @@
 }
 
 .topbar a {
-  color: #514436;
+  color: var(--app-text-soft);
   text-decoration: none;
   font-weight: 700;
 }
@@ -37,17 +34,21 @@
 .settingsCard,
 .previewCard {
   overflow: hidden;
-  border: 1px solid rgba(79, 60, 41, 0.12);
-  border-radius: 28px;
-  background: #fffaf2;
-  box-shadow: 0 24px 80px rgba(79, 60, 41, 0.12);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 88%, transparent);
+  box-shadow: var(--app-shadow-pixel);
+  backdrop-filter: blur(5px);
 }
 
 .banner {
   height: 220px;
   background:
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.45), transparent 28%),
-    linear-gradient(135deg, #e7a07f, #d97757 48%, #8b5cf6);
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--app-accent) 62%, var(--app-surface)),
+      color-mix(in srgb, var(--app-accent-2) 58%, var(--app-surface))
+    );
   background-size: cover;
   background-position: center;
 }
@@ -62,23 +63,24 @@
   width: 124px;
   height: 124px;
   padding: 6px;
-  border-radius: 34px;
-  background: #fffaf2;
+  border-radius: 12px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-small);
 }
 
 .avatar,
 .avatarFallback {
   width: 100%;
   height: 100%;
-  border-radius: 28px;
+  border-radius: 8px;
   object-fit: cover;
 }
 
 .avatarFallback {
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #d97757, #ef8f6a);
-  color: white;
+  background: var(--app-accent);
+  color: #fffaf2;
   font-size: 46px;
   font-weight: 900;
 }
@@ -96,22 +98,24 @@
 
 .profileHeader h1 {
   margin: 0;
+  color: var(--app-text);
+  font-family: var(--font-display);
   font-size: 34px;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .profileHeader p {
   margin: 4px 0 0;
-  color: #7b6d5d;
+  color: var(--app-text-muted);
 }
 
 .statusPill {
   max-width: 260px;
   padding: 8px 12px;
-  border: 1px solid rgba(199, 100, 66, 0.18);
-  border-radius: 999px;
-  background: rgba(199, 100, 66, 0.12);
-  color: #a94f33;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 34%, var(--app-border));
+  border-radius: 6px;
+  background: var(--app-accent-soft);
+  color: var(--app-accent-strong);
   font-size: 13px;
   font-weight: 750;
 }
@@ -119,22 +123,22 @@
 .profileSection {
   margin-top: 28px;
   padding: 18px;
-  border: 1px solid rgba(79, 60, 41, 0.1);
-  border-radius: 20px;
-  background: #f8f1e7;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 68%, transparent);
 }
 
 .profileSection h2 {
   margin: 0 0 8px;
   font-size: 13px;
-  color: #7b6d5d;
+  color: var(--app-text-muted);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .profileSection p {
   margin: 0;
-  color: #514436;
+  color: var(--app-text-soft);
   line-height: 1.55;
   white-space: pre-wrap;
 }
@@ -257,6 +261,70 @@
   color: #7b6d5d;
 }
 
+.skeletonBlock,
+.skeletonLine {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-3, #d4cdbd) 54%, transparent) !important;
+  color: transparent !important;
+}
+
+.skeletonBlock::after,
+.skeletonLine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--app-surface, #fbf7ef) 66%, transparent),
+    transparent
+  );
+  animation: profileSkeletonShimmer 1.2s steps(8, end) infinite;
+}
+
+.skeletonBack {
+  width: 116px;
+  height: 18px;
+}
+
+.skeletonName {
+  width: min(320px, 70vw);
+  height: 34px;
+}
+
+.skeletonUser {
+  width: 160px;
+  height: 14px;
+  margin-top: 10px;
+}
+
+.skeletonSectionTitle {
+  width: 92px;
+  height: 13px;
+}
+
+.skeletonParagraph {
+  width: min(680px, 100%);
+  height: 15px;
+  margin-top: 14px;
+}
+
+.skeletonParagraphShort {
+  width: min(420px, 68%);
+  height: 15px;
+  margin-top: 10px;
+}
+
+@keyframes profileSkeletonShimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 .previewCard .profileCard {
   box-shadow: none;
 }
@@ -300,134 +368,5 @@
 
   .uploadGrid {
     grid-template-columns: 1fr;
-  }
-}
-
-/* Bubble Pop v4 theme polish: CSS-module safe */
-.page {
-  --bp-text: #153845;
-  --bp-text-soft: #3b6572;
-  --bp-muted: rgba(43, 82, 96, 0.66);
-  --bp-glass: rgba(255, 255, 255, 0.56);
-  --bp-glass-strong: rgba(255, 255, 255, 0.74);
-  --bp-glass-hover: rgba(255, 255, 255, 0.66);
-  --bp-hairline: rgba(255, 255, 255, 0.34);
-  --bp-aqua: #78f3ef;
-  --bp-pink: #ff7bc7;
-  --bp-pink-strong: #ff4fac;
-  --bp-danger: #ff4f8f;
-
-  color: var(--bp-text);
-  background:
-    radial-gradient(circle at 12% 8%, rgba(112, 245, 241, 0.30), transparent 35%),
-    radial-gradient(circle at 78% 3%, rgba(255, 123, 190, 0.34), transparent 32%),
-    radial-gradient(circle at 92% 70%, rgba(255, 189, 215, 0.20), transparent 36%),
-    linear-gradient(145deg, #efffff 0%, #fbf3ff 48%, #ffeaf5 100%);
-  font-family: var(--bp-font);
-}
-
-.page::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.12;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.58'/%3E%3C/svg%3E");
-}
-
-.card,
-.profileCard,
-.settingsCard,
-.previewCard,
-.server {
-  border: 0;
-  background: var(--bp-glass);
-  box-shadow:
-    0 30px 90px rgba(255, 111, 181, 0.18),
-    inset 0 1px 0 var(--bp-hairline);
-  backdrop-filter: blur(30px) saturate(1.25);
-}
-
-.header button,
-.cardHeader a,
-.buttons button,
-.card button,
-.button,
-.form button,
-.addEmojiForm button,
-.saveButton {
-  border: 0;
-  background: linear-gradient(135deg, var(--bp-pink), var(--bp-aqua));
-  color: #2b1025;
-  box-shadow: 0 18px 42px rgba(255, 123, 199, 0.24);
-  font-weight: 850;
-}
-
-.input,
-.form input,
-.form textarea,
-.addEmojiForm input {
-  border: 0;
-  background: rgba(255, 255, 255, 0.50);
-  box-shadow: inset 0 1px 0 var(--bp-hairline);
-  color: var(--bp-text);
-}
-
-.input:focus,
-.form input:focus,
-.form textarea:focus,
-.addEmojiForm input:focus {
-  border: 0;
-  box-shadow:
-    inset 0 1px 0 var(--bp-hairline),
-    0 0 0 5px rgba(255, 123, 199, 0.14);
-}
-
-.status,
-.statusMessage,
-.header p,
-.card p,
-.section p {
-  color: var(--bp-muted);
-}
-
-@media (prefers-color-scheme: dark) {
-  .page {
-    --bp-text: #f3ffff;
-    --bp-text-soft: rgba(237, 255, 255, 0.84);
-    --bp-muted: rgba(174, 220, 225, 0.68);
-    --bp-glass: rgba(4, 35, 52, 0.48);
-    --bp-glass-strong: rgba(5, 48, 68, 0.70);
-    --bp-glass-hover: rgba(255, 255, 255, 0.075);
-    --bp-hairline: rgba(255, 255, 255, 0.08);
-    background:
-      radial-gradient(circle at 12% 7%, rgba(0, 232, 242, 0.20), transparent 34%),
-      radial-gradient(circle at 78% 3%, rgba(255, 79, 172, 0.32), transparent 31%),
-      radial-gradient(circle at 92% 70%, rgba(255, 119, 176, 0.16), transparent 36%),
-      linear-gradient(145deg, #032737 0%, #071b2e 48%, #251020 100%);
-  }
-
-  .page::before {
-    opacity: 0.16;
-    mix-blend-mode: soft-light;
-  }
-
-  .card,
-  .profileCard,
-  .settingsCard,
-  .previewCard,
-  .server {
-    box-shadow:
-      0 30px 90px rgba(0, 0, 0, 0.36),
-      inset 0 1px 0 var(--bp-hairline);
-  }
-
-  .input,
-  .form input,
-  .form textarea,
-  .addEmojiForm input {
-    background: rgba(255, 255, 255, 0.07);
-    color: var(--bp-text);
   }
 }

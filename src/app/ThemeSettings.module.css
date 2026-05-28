@@ -1,0 +1,101 @@
+.appearancePanel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 86%, transparent);
+  box-shadow: var(--app-shadow-small);
+  backdrop-filter: blur(4px);
+}
+
+.appearanceHeader {
+  display: grid;
+  gap: 4px;
+}
+
+.appearanceHeader h2 {
+  margin: 0;
+  color: var(--app-text);
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.appearanceHeader p {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.controlGroup {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.controlGroup > legend {
+  padding: 0;
+  color: var(--app-text-soft);
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.optionButton {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--app-border) !important;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 78%, transparent) !important;
+  color: var(--app-text-soft) !important;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 720;
+  box-shadow: none !important;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.optionButton:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--app-accent) 44%, var(--app-border)) !important;
+  background: var(--app-accent-soft) !important;
+  color: var(--app-text) !important;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--app-text) 8%, transparent);
+}
+
+.optionButtonActive {
+  border-color: transparent !important;
+  background: var(--app-accent) !important;
+  color: #fffaf2 !important;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--app-accent) 22%, transparent) !important;
+}
+
+.note {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 560px) {
+  .segmented {
+    grid-template-columns: 1fr;
+  }
+}

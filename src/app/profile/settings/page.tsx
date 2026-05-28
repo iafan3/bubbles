@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import ThemeSettings from "@/app/ThemeSettings";
 import { createClient } from "@/lib/supabase/client";
 import styles from "../profile.module.css";
 
@@ -18,11 +19,24 @@ type Profile = {
 
 const PROFILE_BUCKET = "profile-media";
 
+function getSafeReturnPath() {
+  if (typeof window === "undefined") return "/profile";
+
+  const params = new URLSearchParams(window.location.search);
+  const returnTo = params.get("returnTo");
+
+  if (returnTo && returnTo.startsWith("/")) {
+    return returnTo;
+  }
+
+  return "/profile";
+}
+
 export default function ProfileSettingsPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const [userId, setUserId] = useState("");
-  const [returnPath, setReturnPath] = useState("/profile");
+  const [returnPath] = useState(getSafeReturnPath);
 
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -36,21 +50,6 @@ export default function ProfileSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
-
-  useEffect(() => {
-    function getSafeReturnPath() {
-      const params = new URLSearchParams(window.location.search);
-      const returnTo = params.get("returnTo");
-
-      if (returnTo && returnTo.startsWith("/")) {
-        return returnTo;
-      }
-
-      return "/profile";
-    }
-
-    setReturnPath(getSafeReturnPath());
-  }, []);
 
   useEffect(() => {
     async function loadProfile() {
@@ -358,6 +357,8 @@ export default function ProfileSettingsPage() {
           <section className={styles.settingsCard}>
             <h1>Profile Settings</h1>
             <p>Customize how you appear in Bubbles.</p>
+
+            <ThemeSettings />
 
             <form className={styles.form} onSubmit={saveProfile}>
               <label>

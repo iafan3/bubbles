@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Fragment,
+  type CSSProperties,
   useCallback,
   useEffect,
   useMemo,
@@ -9,6 +11,13 @@ import {
 } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import type { DailyCall } from "@daily-co/daily-js";
+import {
+  getDefaultRole,
+  getRoleOptions,
+  resolveServerRole,
+  type ServerRole,
+} from "@/lib/roles";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./chat.module.css";
 
@@ -41,6 +50,9 @@ type Profile = {
   display_name: string | null;
   avatar_url: string | null;
   avatar_static_url: string | null;
+  banner_url: string | null;
+  bio: string | null;
+  status: string | null;
 };
 
 type MessageReaction = {
@@ -73,6 +85,75 @@ type UploadedMedia = {
 };
 
 type Theme = "light" | "dark";
+type ThemeFamily = "claude" | "sage" | "lavender";
+
+function isThemeFamily(value: string | null): value is ThemeFamily {
+  return value === "claude" || value === "sage" || value === "lavender";
+}
+
+function roleColorStyle(color: string) {
+  return { "--role-color": color } as CSSProperties;
+}
+
+function getCachedChannels() {
+  if (typeof window === "undefined") return [];
+
+  const cachedChannels = window.sessionStorage.getItem("bubbles-channels");
+  if (!cachedChannels) return [];
+
+  try {
+    const parsedChannels = JSON.parse(cachedChannels) as Channel[];
+
+    return parsedChannels.map((channel) => ({
+      ...channel,
+      type: channel.type ?? "text",
+    }));
+  } catch {
+    window.sessionStorage.removeItem("bubbles-channels");
+    return [];
+  }
+}
+
+function getCachedUnreads() {
+  if (typeof window === "undefined") return {};
+
+  const cachedUnreads = window.localStorage.getItem("bubbles-unreads");
+  if (!cachedUnreads) return {};
+
+  try {
+    return JSON.parse(cachedUnreads) as Record<string, number>;
+  } catch {
+    window.localStorage.removeItem("bubbles-unreads");
+    return {};
+  }
+}
+
+function getSavedNotificationsEnabled() {
+  if (typeof window === "undefined") return false;
+
+  return (
+    window.localStorage.getItem("bubbles-notifications-enabled") === "true"
+  );
+}
+
+function getSavedTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+
+  const savedTheme = window.localStorage.getItem("bubbles-theme") as Theme | null;
+  if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function getNotificationsPermission(): NotificationPermission {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return "default";
+  }
+
+  return Notification.permission;
+}
 
 const FALLBACK_REACTION_EMOJIS = ["👍", "😂", "❤️", "🔥", "😭", "🎉"];
 const MESSAGE_MEDIA_BUCKET = "message-media";
@@ -103,36 +184,45 @@ export default function ChannelPage() {
   );
   const lastTypingSentRef = useRef(0);
   const dailyContainerRef = useRef<HTMLDivElement | null>(null);
-  const dailyCallRef = useRef<any>(null);
+  const dailyCallRef = useRef<DailyCall | null>(null);
 
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>(getSavedTheme);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageReactions, setMessageReactions] = useState<MessageReaction[]>(
     []
   );
-  const [serverChannels, setServerChannels] = useState<Channel[]>([]);
+  const [pendingMessageIds, setPendingMessageIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [serverChannels, setServerChannels] =
+    useState<Channel[]>(getCachedChannels);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [serverRoles, setServerRoles] = useState<ServerRole[]>([]);
+  const [roleByUserId, setRoleByUserId] = useState<Record<string, string>>({});
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
   const [unreadByChannelId, setUnreadByChannelId] = useState<
     Record<string, number>
-  >({});
+  >(getCachedUnreads);
   const [reactionEmojis, setReactionEmojis] = useState<string[]>(
     FALLBACK_REACTION_EMOJIS
   );
 
-  const [notificationsPermission, setNotificationsPermission] =
-    useState<NotificationPermission>("default");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [, setNotificationsPermission] =
+    useState<NotificationPermission>(getNotificationsPermission);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    getSavedNotificationsEnabled
+  );
 
   const [currentUserId, setCurrentUserId] = useState("");
   const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [serverOwnerId, setServerOwnerId] = useState("");
 
   const [content, setContent] = useState("");
   const [status, setStatus] = useState("");
-  const [inviteLink, setInviteLink] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const [creatingChannelType, setCreatingChannelType] = useState<
     "text" | "voice" | ""
@@ -157,6 +247,11 @@ export default function ChannelPage() {
   const [voiceCall, setVoiceCall] = useState<VoiceCall | null>(null);
   const [isJoiningVoice, setIsJoiningVoice] = useState(false);
   const [hoveredAvatarKey, setHoveredAvatarKey] = useState("");
+  const [profilePreview, setProfilePreview] = useState<{
+    userId: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const [selectedMediaFile, setSelectedMediaFile] = useState<File | null>(null);
   const [selectedMediaPreviewUrl, setSelectedMediaPreviewUrl] = useState("");
@@ -170,7 +265,9 @@ export default function ChannelPage() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, username, display_name, avatar_url, avatar_static_url")
+        .select(
+          "id, username, display_name, avatar_url, avatar_static_url, banner_url, bio, status"
+        )
         .in("id", uniqueUserIds);
 
       if (error) {
@@ -196,6 +293,48 @@ export default function ChannelPage() {
       await loadProfilesByIds(targetMessages.map((message) => message.user_id));
     },
     [loadProfilesByIds]
+  );
+
+  const loadServerRoles = useCallback(
+    async (targetServerId: string) => {
+      const { data: roleData, error: roleError } = await supabase
+        .from("server_roles")
+        .select("id, server_id, name, color, sort_order, created_at")
+        .eq("server_id", targetServerId)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (roleError) {
+        setServerRoles([]);
+        setStatus(`Role system needs database setup: ${roleError.message}`);
+      } else {
+        setServerRoles((roleData ?? []) as ServerRole[]);
+      }
+
+      const { data: memberData, error: memberError } = await supabase
+        .from("server_members")
+        .select("user_id, role")
+        .eq("server_id", targetServerId);
+
+      if (memberError) {
+        setRoleByUserId({});
+        setStatus(memberError.message);
+        return;
+      }
+
+      const nextRoleByUserId: Record<string, string> = {};
+      const memberUserIds: string[] = [];
+
+      for (const member of memberData ?? []) {
+        const userId = String(member.user_id);
+        nextRoleByUserId[userId] = member.role || "member";
+        memberUserIds.push(userId);
+      }
+
+      setRoleByUserId(nextRoleByUserId);
+      await loadProfilesByIds(memberUserIds);
+    },
+    [loadProfilesByIds, supabase]
   );
 
   const loadReactionsForMessages = useCallback(
@@ -224,59 +363,6 @@ export default function ChannelPage() {
   );
 
   useEffect(() => {
-    const cachedChannels = window.sessionStorage.getItem("bubbles-channels");
-
-    if (cachedChannels) {
-      try {
-        const parsedChannels = JSON.parse(cachedChannels) as Channel[];
-
-        setServerChannels(
-          parsedChannels.map((channel) => ({
-            ...channel,
-            type: channel.type ?? "text",
-          }))
-        );
-      } catch {
-        window.sessionStorage.removeItem("bubbles-channels");
-      }
-    }
-
-    const cachedUnreads = window.localStorage.getItem("bubbles-unreads");
-
-    if (cachedUnreads) {
-      try {
-        setUnreadByChannelId(JSON.parse(cachedUnreads));
-      } catch {
-        window.localStorage.removeItem("bubbles-unreads");
-      }
-    }
-
-    const savedNotificationSetting = window.localStorage.getItem(
-      "bubbles-notifications-enabled"
-    );
-
-    setNotificationsEnabled(savedNotificationSetting === "true");
-
-    const savedTheme = window.localStorage.getItem(
-      "bubbles-theme"
-    ) as Theme | null;
-
-    if (savedTheme === "light" || savedTheme === "dark") {
-      setTheme(savedTheme);
-    } else {
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
-      ).matches;
-
-      setTheme(prefersDark ? "dark" : "light");
-    }
-
-    if ("Notification" in window) {
-      setNotificationsPermission(Notification.permission);
-    }
-  }, []);
-
-  useEffect(() => {
     return () => {
       if (selectedMediaPreviewUrl) {
         URL.revokeObjectURL(selectedMediaPreviewUrl);
@@ -287,11 +373,13 @@ export default function ChannelPage() {
   useEffect(() => {
     function closeMessageMenus() {
       setMessageActionMenu(null);
+      setProfilePreview(null);
     }
 
     function closeMessageMenusOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setMessageActionMenu(null);
+        setProfilePreview(null);
       }
     }
 
@@ -342,10 +430,11 @@ export default function ChannelPage() {
 
   useEffect(() => {
     async function loadPage() {
+      setIsLoading(true);
       setStatus("");
       setMessages([]);
       setMessageReactions([]);
-      setInviteLink("");
+      setPendingMessageIds(new Set());
       setEditingChannelId("");
       setEditingChannelName("");
       setDraggingChannelId("");
@@ -377,6 +466,7 @@ export default function ChannelPage() {
 
       if (channelError || !channelData) {
         setStatus(channelError?.message ?? "Could not load channel.");
+        setIsLoading(false);
         return;
       }
 
@@ -387,6 +477,7 @@ export default function ChannelPage() {
 
       if (loadedChannel.type !== "text") {
         setStatus("Open a text channel to view chat.");
+        setIsLoading(false);
         return;
       }
 
@@ -400,10 +491,13 @@ export default function ChannelPage() {
 
       if (serverError) {
         setStatus(serverError.message);
+        setIsLoading(false);
         return;
       }
 
+      setServerOwnerId(serverData?.owner_id ?? "");
       setIsOwner(serverData?.owner_id === user.id);
+      await loadServerRoles(loadedChannel.server_id);
 
       const { data: settingsData } = await supabase
         .from("server_settings")
@@ -429,6 +523,7 @@ export default function ChannelPage() {
 
       if (channelListError) {
         setStatus(channelListError.message);
+        setIsLoading(false);
         return;
       }
 
@@ -453,6 +548,7 @@ export default function ChannelPage() {
 
       if (messageError) {
         setStatus(messageError.message);
+        setIsLoading(false);
         return;
       }
 
@@ -461,6 +557,7 @@ export default function ChannelPage() {
       setMessages(nextMessages);
       await loadProfilesForMessages(nextMessages);
       await loadReactionsForMessages(nextMessages);
+      setIsLoading(false);
     }
 
     loadPage();
@@ -549,6 +646,7 @@ export default function ChannelPage() {
     supabase,
     loadProfilesByIds,
     loadProfilesForMessages,
+    loadServerRoles,
     loadReactionsForMessages,
   ]);
 
@@ -601,6 +699,42 @@ export default function ChannelPage() {
       supabase.removeChannel(reactionChannel);
     };
   }, [currentChannel, supabase]);
+
+  useEffect(() => {
+    if (!currentChannel) return;
+
+    const roleChannel = supabase
+      .channel(`server-roles:${currentChannel.server_id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "server_roles",
+          filter: `server_id=eq.${currentChannel.server_id}`,
+        },
+        () => {
+          loadServerRoles(currentChannel.server_id);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "server_members",
+          filter: `server_id=eq.${currentChannel.server_id}`,
+        },
+        () => {
+          loadServerRoles(currentChannel.server_id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(roleChannel);
+    };
+  }, [currentChannel, loadServerRoles, supabase]);
 
   useEffect(() => {
     if (!currentChannel || serverChannels.length === 0 || !currentUserId) return;
@@ -900,6 +1034,22 @@ export default function ChannelPage() {
     return `@${profile.username}`;
   }
 
+  function getRoleForUser(userId: string) {
+    if (userId && userId === serverOwnerId) {
+      return getDefaultRole("owner");
+    }
+
+    return resolveServerRole(roleByUserId[userId], serverRoles);
+  }
+
+  function getRoleSortIndex(userId: string) {
+    const role = getRoleForUser(userId);
+    const options = getRoleOptions(serverRoles);
+    const index = options.findIndex((option) => option.id === role.id);
+
+    return index === -1 ? options.length : index;
+  }
+
   function getAvatarInitial(userId: string) {
     const name = getProfileName(userId);
 
@@ -934,6 +1084,35 @@ export default function ChannelPage() {
         alt={`${getProfileName(userId)} avatar`}
       />
     );
+  }
+
+  function openProfilePreview(
+    event: React.MouseEvent<HTMLElement>,
+    userId: string
+  ) {
+    event.stopPropagation();
+    setMessageActionMenu(null);
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const cardWidth = 292;
+    const cardHeight = 338;
+    const gap = 10;
+    const opensLeft = rect.left + cardWidth + gap > window.innerWidth;
+    const x = opensLeft
+      ? Math.max(12, rect.right - cardWidth)
+      : Math.min(rect.left, window.innerWidth - cardWidth - 12);
+    const y = Math.min(rect.bottom + gap, window.innerHeight - cardHeight - 12);
+
+    setProfilePreview((current) =>
+      current?.userId === userId ? null : { userId, x, y: Math.max(12, y) }
+    );
+  }
+
+  async function copyProfileUsername(userId: string) {
+    const username = getProfileUsername(userId);
+
+    await navigator.clipboard.writeText(username);
+    setStatus(`${username} copied.`);
   }
 
   function getTypingText() {
@@ -1057,6 +1236,36 @@ export default function ChannelPage() {
     return difference >= 0 && difference <= MERGE_WINDOW_MS;
   }
 
+  function isNewMessageDay(message: Message, index: number) {
+    if (index === 0) return true;
+
+    const previousMessage = messages[index - 1];
+
+    if (!previousMessage) return true;
+
+    return (
+      new Date(message.created_at).toDateString() !==
+      new Date(previousMessage.created_at).toDateString()
+    );
+  }
+
+  function formatMessageDay(value: string) {
+    const date = new Date(value);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return "Today";
+    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+
+    return date.toLocaleDateString([], {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
+    });
+  }
+
   function startReply(message: Message) {
     setReplyingToMessage(message);
     setMessageActionMenu(null);
@@ -1102,8 +1311,19 @@ export default function ChannelPage() {
   function toggleTheme() {
     setTheme((current) => {
       const nextTheme = current === "dark" ? "light" : "dark";
+      const savedFamily = window.localStorage.getItem("bubbles-theme-family");
+      const family = isThemeFamily(savedFamily) ? savedFamily : "claude";
 
       window.localStorage.setItem("bubbles-theme", nextTheme);
+      window.localStorage.setItem("bubbles-theme-mode", nextTheme);
+      window.localStorage.setItem("bubbles-theme-family", family);
+
+      for (const element of [document.documentElement, document.body]) {
+        element.dataset.bubblesThemeFamily = family;
+        element.dataset.bubblesThemeMode = nextTheme;
+        element.dataset.bubblesResolvedMode = nextTheme;
+        element.dataset.bubblesTheme = `${family}-${nextTheme}`;
+      }
 
       return nextTheme;
     });
@@ -1503,6 +1723,11 @@ export default function ChannelPage() {
     };
 
     setMessages((current) => [...current, tempMessage]);
+    setPendingMessageIds((current) => {
+      const next = new Set(current);
+      next.add(tempId);
+      return next;
+    });
     setContent("");
     setReplyingToMessage(null);
     clearSelectedMedia();
@@ -1535,6 +1760,11 @@ export default function ChannelPage() {
       setMessages((current) =>
         current.filter((message) => message.id !== tempId)
       );
+      setPendingMessageIds((current) => {
+        const next = new Set(current);
+        next.delete(tempId);
+        return next;
+      });
 
       if (uploadedMedia?.media_path) {
         await supabase.storage
@@ -1546,6 +1776,12 @@ export default function ChannelPage() {
     }
 
     if (savedMessage) {
+      setPendingMessageIds((current) => {
+        const next = new Set(current);
+        next.delete(tempId);
+        return next;
+      });
+
       setMessages((current) => {
         const withoutTemp = current.filter((message) => message.id !== tempId);
 
@@ -1674,40 +1910,6 @@ export default function ChannelPage() {
     }
   }
 
-  async function createInvite() {
-    setStatus("");
-
-    if (!currentChannel) {
-      setStatus("Channel is still loading.");
-      return;
-    }
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setStatus("You need to sign in first.");
-      return;
-    }
-
-    const code = crypto.randomUUID().slice(0, 8);
-
-    const { error } = await supabase.from("invites").insert({
-      server_id: currentChannel.server_id,
-      code,
-      created_by: user.id,
-      expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
-    });
-
-    if (error) {
-      setStatus(error.message);
-      return;
-    }
-
-    setInviteLink(`${window.location.origin}/invite/${code}`);
-  }
-
   function startCreateChannel(type: "text" | "voice") {
     setCreatingChannelType(type);
     setNewChannelName("");
@@ -1792,15 +1994,8 @@ export default function ChannelPage() {
 
     setStatus("");
 
-    const { error } = await supabase
-      .from("channels")
-      .update({ name: cleanName })
-      .eq("id", channel.id);
-
-    if (error) {
-      setStatus(error.message);
-      return;
-    }
+    const previousChannels = serverChannels;
+    const previousCurrentChannel = currentChannel;
 
     setServerChannels((current) => {
       const nextChannels = current.map((item) =>
@@ -1814,6 +2009,19 @@ export default function ChannelPage() {
 
     if (currentChannel?.id === channel.id) {
       setCurrentChannel({ ...currentChannel, name: cleanName });
+    }
+
+    const { error } = await supabase
+      .from("channels")
+      .update({ name: cleanName })
+      .eq("id", channel.id);
+
+    if (error) {
+      setStatus(error.message);
+      setServerChannels(previousChannels);
+      cacheChannels(previousChannels);
+      setCurrentChannel(previousCurrentChannel);
+      return;
     }
   }
 
@@ -1933,19 +2141,121 @@ export default function ChannelPage() {
     (channel) => channel.type === "voice"
   );
 
-  const sortedOnlineUserIds = [...onlineUserIds].sort((a, b) =>
-    getProfileName(a).localeCompare(getProfileName(b))
-  );
+  const sortedOnlineUserIds = [...onlineUserIds].sort((a, b) => {
+    const roleSort = getRoleSortIndex(a) - getRoleSortIndex(b);
+
+    if (roleSort !== 0) return roleSort;
+
+    return getProfileName(a).localeCompare(getProfileName(b));
+  });
 
   const typingText = getTypingText();
+  const previewProfile = profilePreview
+    ? profiles[profilePreview.userId]
+    : null;
+  const previewRole = profilePreview
+    ? getRoleForUser(profilePreview.userId)
+    : null;
+  const previewIsOnline = profilePreview
+    ? onlineUserIds.includes(profilePreview.userId)
+    : false;
+
+  if (isLoading) {
+    return (
+      <main
+        className={styles.page}
+        data-theme={theme}
+        aria-busy="true"
+        suppressHydrationWarning
+      >
+        <aside className={styles.sidebar}>
+          <div className={`${styles.skeletonLine} ${styles.skeletonBrand}`} />
+
+          <div className={styles.channels}>
+            {Array.from({ length: 7 }).map((_, index) => (
+              <div className={styles.skeletonChannel} key={index}>
+                <span className={styles.skeletonHash} />
+                <span
+                  className={`${styles.skeletonLine} ${styles.skeletonChannelText}`}
+                />
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <section className={styles.chat}>
+          <header className={styles.chatHeader}>
+            <div>
+              <div className={`${styles.skeletonLine} ${styles.skeletonTitle}`} />
+              <div className={`${styles.skeletonLine} ${styles.skeletonMeta}`} />
+            </div>
+          </header>
+
+          <div className={styles.messages}>
+            {Array.from({ length: 7 }).map((_, index) => (
+              <article
+                className={`${styles.message} ${styles.skeletonMessage}`}
+                key={index}
+              >
+                <div className={styles.messageHeader}>
+                  <span className={styles.skeletonAvatar} />
+                  <div className={styles.messageBody}>
+                    <div className={styles.messageMeta}>
+                      <span
+                        className={`${styles.skeletonLine} ${styles.skeletonName}`}
+                      />
+                      <span
+                        className={`${styles.skeletonLine} ${styles.skeletonTime}`}
+                      />
+                    </div>
+                    <span
+                      className={`${styles.skeletonLine} ${styles.skeletonMessageLine}`}
+                    />
+                    <span
+                      className={`${styles.skeletonLine} ${styles.skeletonMessageLineShort}`}
+                    />
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className={styles.composer}>
+            <div className={`${styles.skeletonLine} ${styles.skeletonComposer}`} />
+          </div>
+        </section>
+
+        <aside className={styles.membersPanel}>
+          <div className={styles.membersHeader}>
+            <div className={`${styles.skeletonLine} ${styles.skeletonMemberTitle}`} />
+            <span className={styles.skeletonHash} />
+          </div>
+
+          <div className={styles.memberList}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div className={styles.memberRow} key={index}>
+                <span className={styles.skeletonMemberAvatar} />
+                <div className={styles.memberText}>
+                  <span
+                    className={`${styles.skeletonLine} ${styles.skeletonMemberName}`}
+                  />
+                  <span
+                    className={`${styles.skeletonLine} ${styles.skeletonMemberMeta}`}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </main>
+    );
+  }
 
   return (
-    <main className={styles.page} data-theme={theme}>
+    <main className={styles.page} data-theme={theme} suppressHydrationWarning>
       <aside className={styles.sidebar}>
-        <h2>Bubbles</h2>
-
-        <Link className={styles.homeLink} href="/">
-          Home
+        <Link className={styles.brandLink} href="/">
+          Bubbles
         </Link>
 
         {currentChannel && isOwner && (
@@ -2235,13 +2545,6 @@ export default function ChannelPage() {
           )}
         </div>
 
-        <button className={styles.inviteButton} onClick={createInvite}>
-          Create invite
-        </button>
-
-        {inviteLink && (
-          <input className={styles.inviteInput} value={inviteLink} readOnly />
-        )}
       </aside>
 
       <section className={styles.chat}>
@@ -2287,14 +2590,23 @@ export default function ChannelPage() {
             const isMoreMenuOpen =
               messageActionMenu?.messageId === message.id &&
               messageActionMenu.type === "more";
+            const messageRole = getRoleForUser(message.user_id);
+            const showDaySeparator = isNewMessageDay(message, index);
+            const isPendingMessage = pendingMessageIds.has(message.id);
 
             return (
+              <Fragment key={message.id}>
+                {showDaySeparator && (
+                  <div className={styles.dateSeparator}>
+                    <span>{formatMessageDay(message.created_at)}</span>
+                  </div>
+                )}
+
               <article
                 id={`message-${message.id}`}
-                key={message.id}
                 className={`${styles.message} ${
                   isMerged ? styles.mergedMessage : ""
-                }`}
+                } ${isPendingMessage ? styles.pendingMessage : ""}`}
               >
                 <div
                   className={styles.messageActionStrip}
@@ -2409,33 +2721,48 @@ export default function ChannelPage() {
 
                 <div className={styles.messageHeader}>
                   {isMerged ? (
-                    <div className={styles.mergedMessageSpacer}>
-                      <time>
-                        {new Date(message.created_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
-                    </div>
+                    <div className={styles.mergedMessageSpacer} />
                   ) : (
-                    <div
+                    <button
+                      type="button"
                       className={styles.messageAvatar}
                       onMouseEnter={() => setHoveredAvatarKey(messageAvatarKey)}
                       onMouseLeave={() => setHoveredAvatarKey("")}
+                      onClick={(event) =>
+                        openProfilePreview(event, message.user_id)
+                      }
+                      title={`View ${getProfileName(message.user_id)}`}
                     >
                       {renderHoverAvatar(message.user_id, messageAvatarKey)}
-                    </div>
+                    </button>
                   )}
 
                   <div className={styles.messageBody}>
                     {!isMerged && (
                       <div className={styles.messageMeta}>
-                        <strong>{getProfileName(message.user_id)}</strong>
+                        <strong
+                          className={styles.roleName}
+                          style={roleColorStyle(messageRole.color)}
+                        >
+                          {getProfileName(message.user_id)}
+                        </strong>
+                        <span
+                          className={styles.roleBadge}
+                          style={roleColorStyle(messageRole.color)}
+                        >
+                          {messageRole.name}
+                        </span>
                         <time>
-                          {new Date(message.created_at).toLocaleString()}
+                          {new Date(message.created_at).toLocaleTimeString([], {
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
                         </time>
                         {message.edited_at && (
                           <span className={styles.editedLabel}>edited</span>
+                        )}
+                        {isPendingMessage && (
+                          <span className={styles.pendingLabel}>sending</span>
                         )}
                       </div>
                     )}
@@ -2447,7 +2774,14 @@ export default function ChannelPage() {
                         onClick={() => scrollToMessage(replyMessage.id)}
                       >
                         <span className={styles.replyIndicatorLine} />
-                        <strong>{getProfileName(replyMessage.user_id)}</strong>
+                        <strong
+                          className={styles.roleName}
+                          style={roleColorStyle(
+                            getRoleForUser(replyMessage.user_id).color
+                          )}
+                        >
+                          {getProfileName(replyMessage.user_id)}
+                        </strong>
                         <span className={styles.replyPreviewText}>
                           {getReplyPreviewText(replyMessage)}
                         </span>
@@ -2509,8 +2843,16 @@ export default function ChannelPage() {
                   </div>
                 </div>
               </article>
+              </Fragment>
             );
           })}
+
+          {messages.length === 0 && (
+            <section className={styles.emptyChat}>
+              <h2># {currentChannel?.name ?? "channel"}</h2>
+              <p>No messages yet. Start the conversation here.</p>
+            </section>
+          )}
         </div>
 
         <div className={styles.typingIndicator}>{typingText}</div>
@@ -2600,21 +2942,36 @@ export default function ChannelPage() {
           ) : (
             sortedOnlineUserIds.map((userId) => {
               const memberAvatarKey = `member-${userId}`;
+              const memberRole = getRoleForUser(userId);
 
               return (
                 <div className={styles.memberRow} key={userId}>
-                  <div
+                  <button
+                    type="button"
                     className={styles.memberAvatar}
                     onMouseEnter={() => setHoveredAvatarKey(memberAvatarKey)}
                     onMouseLeave={() => setHoveredAvatarKey("")}
+                    onClick={(event) => openProfilePreview(event, userId)}
+                    title={`View ${getProfileName(userId)}`}
                   >
                     {renderHoverAvatar(userId, memberAvatarKey)}
                     <span className={styles.onlineDot} />
-                  </div>
+                  </button>
 
                   <div className={styles.memberText}>
-                    <strong>{getProfileName(userId)}</strong>
+                    <strong
+                      className={styles.roleName}
+                      style={roleColorStyle(memberRole.color)}
+                    >
+                      {getProfileName(userId)}
+                    </strong>
                     <span>{getProfileUsername(userId)}</span>
+                    <small
+                      className={styles.memberRole}
+                      style={roleColorStyle(memberRole.color)}
+                    >
+                      {memberRole.name}
+                    </small>
                   </div>
                 </div>
               );
@@ -2646,7 +3003,14 @@ export default function ChannelPage() {
           </Link>
 
           <div className={styles.currentUserText}>
-            <strong>
+            <strong
+              className={styles.roleName}
+              style={
+                currentUserId
+                  ? roleColorStyle(getRoleForUser(currentUserId).color)
+                  : undefined
+              }
+            >
               {currentUserId ? getProfileName(currentUserId) : "Loading"}
             </strong>
             <span>
@@ -2681,6 +3045,90 @@ export default function ChannelPage() {
           </button>
         </div>
       </aside>
+
+      {profilePreview && previewRole && (
+        <section
+          className={styles.profilePreviewCard}
+          style={{
+            left: profilePreview.x,
+            top: profilePreview.y,
+            ...roleColorStyle(previewRole.color),
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div
+            className={styles.profilePreviewBanner}
+            style={
+              previewProfile?.banner_url
+                ? { backgroundImage: `url(${previewProfile.banner_url})` }
+                : undefined
+            }
+          />
+
+          <div className={styles.profilePreviewBody}>
+            <div className={styles.profilePreviewAvatar}>
+              {getAvatarUrl(profilePreview.userId) ? (
+                <img
+                  className={styles.avatarImage}
+                  src={getAvatarUrl(profilePreview.userId)}
+                  alt={`${getProfileName(profilePreview.userId)} avatar`}
+                />
+              ) : (
+                getAvatarInitial(profilePreview.userId)
+              )}
+              <span
+                className={`${styles.profilePreviewDot} ${
+                  previewIsOnline ? styles.profilePreviewDotOnline : ""
+                }`}
+              />
+            </div>
+
+            <div className={styles.profilePreviewIdentity}>
+              <strong className={styles.roleName}>
+                {getProfileName(profilePreview.userId)}
+              </strong>
+              <span>{getProfileUsername(profilePreview.userId)}</span>
+            </div>
+
+            <div className={styles.profilePreviewRole}>
+              <span className={styles.roleSwatch} />
+              <strong>{previewRole.name}</strong>
+            </div>
+
+            {previewProfile?.status && (
+              <p className={styles.profilePreviewStatus}>
+                {previewProfile.status}
+              </p>
+            )}
+
+            <div className={styles.profilePreviewAbout}>
+              <h3>About me</h3>
+              <p>
+                {previewProfile?.bio?.trim()
+                  ? previewProfile.bio
+                  : "No bio yet."}
+              </p>
+            </div>
+
+            <div className={styles.profilePreviewActions}>
+              <button
+                type="button"
+                onClick={() => copyProfileUsername(profilePreview.userId)}
+              >
+                Copy username
+              </button>
+
+              <Link
+                href={`/profile?userId=${encodeURIComponent(
+                  profilePreview.userId
+                )}&returnTo=${encodeURIComponent(`/channels/${channelId}`)}`}
+              >
+                View profile
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

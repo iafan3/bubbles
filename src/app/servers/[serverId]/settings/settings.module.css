@@ -1,65 +1,315 @@
 .page {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 32px;
-  background: #f4f4f5;
-  font-family: Arial, sans-serif;
+  padding: 28px;
+  color: var(--app-text);
+  font-family: var(--font-ui);
+  background: transparent;
 }
 
 .card {
-  width: min(720px, 100%);
-  padding: 24px;
-  border: 1px solid #ddd;
-  border-radius: 18px;
-  background: white;
+  width: min(1120px, 100%);
+  margin: 0 auto;
 }
 
 .topbar {
-  margin-bottom: 18px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.topbar a {
-  color: #111;
+.brandLink,
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
   text-decoration: none;
+  box-shadow: var(--app-shadow-small);
+  transition:
+    background 180ms steps(4, end),
+    color 180ms steps(4, end),
+    transform 190ms cubic-bezier(0.2, 1.45, 0.22, 1),
+    box-shadow 190ms cubic-bezier(0.2, 1.2, 0.22, 1);
 }
 
-.topbar a:hover {
-  text-decoration: underline;
+.brandLink {
+  padding: 0 14px;
+  background: color-mix(in srgb, var(--app-surface) 82%, transparent);
+  color: var(--app-text);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 760;
+}
+
+.backLink {
+  padding: 0 12px;
+  background: var(--app-accent);
+  color: #fffaf2;
+  font-weight: 760;
+}
+
+.brandLink:hover,
+.backLink:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--app-text) 10%, transparent);
+}
+
+.brandLink:hover {
+  background: var(--app-accent-soft);
+}
+
+.backLink:hover {
+  background: var(--app-accent-strong);
 }
 
 .header {
-  padding-bottom: 18px;
-  border-bottom: 1px solid #eee;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 86%, transparent);
+  box-shadow: var(--app-shadow-pixel);
+  backdrop-filter: blur(5px);
+}
+
+.serverAvatarPreview {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-accent-soft);
+  color: var(--app-accent-strong);
+  font-size: 30px;
+  font-weight: 850;
+  box-shadow: var(--app-shadow-small);
+}
+
+.serverAvatarPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .header h1 {
-  margin: 0 0 6px;
-  font-size: 30px;
+  margin: 0;
+  color: var(--app-text);
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: 0;
 }
 
 .header p {
-  margin: 0;
-  color: #555;
+  margin: 6px 0 0;
+  color: var(--app-text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .section {
-  margin-top: 24px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 82%, transparent);
+  box-shadow: var(--app-shadow-small);
+  backdrop-filter: blur(4px);
+}
+
+.sectionWide {
+  grid-column: 1 / -1;
+}
+
+.inviteSection {
+  display: grid;
+  align-content: start;
 }
 
 .section h2 {
-  margin: 0 0 8px;
-  font-size: 20px;
+  margin: 0 0 6px;
+  color: var(--app-text);
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0;
 }
 
 .section p {
-  margin: 0 0 16px;
-  color: #555;
+  margin: 0 0 14px;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.form,
+.customEmojiForm {
+  display: grid;
+  gap: 12px;
+}
+
+.form label {
+  display: grid;
+  gap: 7px;
+  color: var(--app-text-soft);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.form input,
+.addEmojiForm input,
+.customEmojiForm input,
+.roleForm input:not([type="color"]),
+.memberRoleItem select {
+  min-width: 0;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 84%, transparent);
+  color: var(--app-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-surface-3) 44%, transparent);
+}
+
+.form input::placeholder,
+.addEmojiForm input::placeholder,
+.customEmojiForm input::placeholder,
+.roleForm input::placeholder {
+  color: var(--app-text-muted);
+}
+
+.uploadBox,
+.fileButton {
+  position: relative;
+  min-height: 74px;
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--app-border) 80%, var(--app-text-muted));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 62%, transparent);
+  cursor: pointer;
+}
+
+.uploadBox strong {
+  color: var(--app-text);
+}
+
+.uploadBox span {
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 520;
+}
+
+.uploadBox input,
+.fileButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.buttonRow,
+.addEmojiForm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.buttonRow {
+  flex-wrap: wrap;
+}
+
+.saveButton,
+.secondaryButton,
+.addEmojiForm button,
+.customEmojiForm button,
+.roleForm button,
+.emojiItem button,
+.roleItem button,
+.customEmojiItem button,
+.fileButton {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 760;
+  box-shadow: var(--app-shadow-small);
+  transition:
+    background 180ms steps(4, end),
+    color 180ms steps(4, end),
+    transform 190ms cubic-bezier(0.2, 1.45, 0.22, 1),
+    box-shadow 190ms cubic-bezier(0.2, 1.2, 0.22, 1);
+}
+
+.saveButton,
+.addEmojiForm button,
+.customEmojiForm button,
+.roleForm button {
+  background: var(--app-accent);
+  color: #fffaf2;
+}
+
+.secondaryButton,
+.fileButton {
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+
+.emojiItem button,
+.roleItem button,
+.customEmojiItem button {
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+}
+
+.saveButton:hover,
+.addEmojiForm button:hover,
+.customEmojiForm button:hover,
+.roleForm button:hover {
+  transform: translate(-1px, -1px);
+  background: var(--app-accent-strong);
+}
+
+.secondaryButton:hover,
+.fileButton:hover {
+  transform: translate(-1px, -1px);
+  background: var(--app-accent-soft);
+}
+
+.emojiItem button:hover,
+.roleItem button:hover,
+.customEmojiItem button:hover {
+  transform: translate(-1px, -1px);
+  background: color-mix(in srgb, var(--app-danger-soft) 74%, var(--app-surface));
+}
+
+.saveButton:disabled,
+.secondaryButton:disabled,
+.customEmojiForm button:disabled,
+.roleForm button:disabled,
+.dangerButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
 }
 
 .emojiGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   gap: 10px;
 }
 
@@ -68,204 +318,381 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  background: #fafafa;
+  padding: 9px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 68%, transparent);
 }
 
 .emojiItem span {
-  font-size: 24px;
-}
-
-.emojiItem button {
-  padding: 7px 9px;
-  border: none;
-  border-radius: 8px;
-  background: #fee2e2;
-  color: #b00020;
-  cursor: pointer;
-}
-
-.emojiItem button:hover {
-  background: #fecaca;
+  font-size: 23px;
 }
 
 .addEmojiForm {
-  margin-top: 16px;
-  display: flex;
-  gap: 10px;
+  margin-top: 12px;
 }
 
 .addEmojiForm input {
   flex: 1;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  font-size: 16px;
 }
 
-.addEmojiForm button,
-.saveButton {
-  padding: 12px 16px;
-  border: none;
-  border-radius: 10px;
-  background: #111;
-  color: white;
+.roleLayout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
+}
+
+.roleColumn,
+.memberRoleList {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.roleForm {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 48px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.colorPicker {
+  position: relative;
+  width: 48px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 72%, transparent);
+  box-shadow: var(--app-shadow-small);
   cursor: pointer;
 }
 
-.addEmojiForm button:hover,
-.saveButton:hover {
-  background: #333;
+.colorPicker span,
+.roleSwatch {
+  display: block;
+  border: 1px solid color-mix(in srgb, var(--role-color) 70%, var(--app-border));
+  border-radius: 6px;
+  background: var(--role-color);
 }
 
-.saveButton {
-  width: 100%;
-  margin-top: 24px;
+.colorPicker span {
+  width: 26px;
+  height: 26px;
+}
+
+.colorPicker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.roleList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.roleItem,
+.memberRoleItem {
+  min-width: 0;
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 66%, transparent);
+}
+
+.roleItem {
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+}
+
+.roleSwatch {
+  width: 26px;
+  height: 26px;
+}
+
+.roleItem strong,
+.memberRoleItem strong {
+  display: block;
+  overflow: hidden;
+  color: var(--role-color) !important;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roleItem small,
+.memberRoleItem span {
+  display: block;
+  overflow: hidden;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberRoleItem {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px);
+}
+
+.memberRoleItem select:disabled {
+  cursor: not-allowed;
+  opacity: 0.74;
+}
+
+.customEmojiForm {
+  grid-template-columns: minmax(160px, 1fr) auto auto;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.fileButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.customEmojiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.customEmojiItem {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface-2) 68%, transparent);
+}
+
+.customEmojiItem img {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+
+.customEmojiItem div {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.customEmojiItem strong {
+  overflow: hidden;
+  color: var(--app-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status,
+.empty {
+  color: var(--app-text-muted);
 }
 
 .status {
-  margin-top: 16px;
-  color: #555;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 82%, transparent);
 }
 
-@media (max-width: 640px) {
+.dangerSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-color: color-mix(in srgb, var(--app-danger) 38%, var(--app-border));
+  background: color-mix(in srgb, var(--app-danger-soft) 28%, var(--app-surface));
+}
+
+.dangerSection p {
+  margin-bottom: 0;
+}
+
+.dangerButton {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--app-danger) 48%, var(--app-border));
+  border-radius: 8px;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 800;
+  box-shadow: var(--app-shadow-small);
+  transition:
+    background 180ms steps(4, end),
+    transform 190ms cubic-bezier(0.2, 1.45, 0.22, 1),
+    box-shadow 190ms cubic-bezier(0.2, 1.2, 0.22, 1);
+}
+
+.dangerButton:hover {
+  transform: translate(-1px, -1px);
+  background: color-mix(in srgb, var(--app-danger-soft) 70%, var(--app-surface));
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--app-danger) 14%, transparent);
+}
+
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 20;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 44%, var(--app-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 92%, transparent);
+  color: var(--app-text);
+  font-weight: 800;
+  box-shadow: var(--app-shadow-pixel);
+  backdrop-filter: blur(8px);
+  animation: toastPop 420ms cubic-bezier(0.2, 1.35, 0.22, 1);
+}
+
+@keyframes toastPop {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+
+  62% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.025);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.skeletonButton,
+.skeletonBlock,
+.skeletonLine {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--app-surface-3) 54%, transparent) !important;
+  color: transparent !important;
+}
+
+.skeletonButton {
+  width: 126px;
+}
+
+.skeletonLine {
+  display: block;
+}
+
+.skeletonTitle {
+  width: min(360px, 70vw);
+  height: 34px;
+}
+
+.skeletonMeta {
+  width: min(440px, 72vw);
+  height: 14px;
+  margin-top: 10px;
+}
+
+.skeletonSection {
+  pointer-events: none;
+}
+
+.skeletonSectionTitle {
+  width: 170px;
+  height: 22px;
+}
+
+.skeletonSectionText {
+  width: min(420px, 78%);
+  height: 13px;
+  margin-top: 10px;
+}
+
+.skeletonInput {
+  width: 100%;
+  height: 42px;
+  margin-top: 18px;
+}
+
+.skeletonInputShort {
+  width: min(220px, 48%);
+  height: 38px;
+  margin-top: 12px;
+}
+
+.skeletonButton::after,
+.skeletonBlock::after,
+.skeletonLine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--app-surface) 66%, transparent),
+    transparent
+  );
+  animation: settingsSkeletonShimmer 1.2s steps(8, end) infinite;
+}
+
+@keyframes settingsSkeletonShimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (max-width: 820px) {
   .page {
     padding: 16px;
   }
 
-  .addEmojiForm {
+  .settingsGrid,
+  .customEmojiForm,
+  .roleLayout,
+  .roleForm,
+  .memberRoleItem {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    grid-template-columns: 1fr;
+  }
+
+  .buttonRow,
+  .addEmojiForm,
+  .dangerSection {
+    align-items: stretch;
     flex-direction: column;
   }
-}
 
-/* Bubble Pop v4 theme polish: CSS-module safe */
-.page {
-  --bp-text: #153845;
-  --bp-text-soft: #3b6572;
-  --bp-muted: rgba(43, 82, 96, 0.66);
-  --bp-glass: rgba(255, 255, 255, 0.56);
-  --bp-glass-strong: rgba(255, 255, 255, 0.74);
-  --bp-glass-hover: rgba(255, 255, 255, 0.66);
-  --bp-hairline: rgba(255, 255, 255, 0.34);
-  --bp-aqua: #78f3ef;
-  --bp-pink: #ff7bc7;
-  --bp-pink-strong: #ff4fac;
-  --bp-danger: #ff4f8f;
-
-  color: var(--bp-text);
-  background:
-    radial-gradient(circle at 12% 8%, rgba(112, 245, 241, 0.30), transparent 35%),
-    radial-gradient(circle at 78% 3%, rgba(255, 123, 190, 0.34), transparent 32%),
-    radial-gradient(circle at 92% 70%, rgba(255, 189, 215, 0.20), transparent 36%),
-    linear-gradient(145deg, #efffff 0%, #fbf3ff 48%, #ffeaf5 100%);
-  font-family: var(--bp-font);
-}
-
-.page::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.12;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.58'/%3E%3C/svg%3E");
-}
-
-.card,
-.profileCard,
-.settingsCard,
-.previewCard,
-.server {
-  border: 0;
-  background: var(--bp-glass);
-  box-shadow:
-    0 30px 90px rgba(255, 111, 181, 0.18),
-    inset 0 1px 0 var(--bp-hairline);
-  backdrop-filter: blur(30px) saturate(1.25);
-}
-
-.header button,
-.cardHeader a,
-.buttons button,
-.card button,
-.button,
-.form button,
-.addEmojiForm button,
-.saveButton {
-  border: 0;
-  background: linear-gradient(135deg, var(--bp-pink), var(--bp-aqua));
-  color: #2b1025;
-  box-shadow: 0 18px 42px rgba(255, 123, 199, 0.24);
-  font-weight: 850;
-}
-
-.input,
-.form input,
-.form textarea,
-.addEmojiForm input {
-  border: 0;
-  background: rgba(255, 255, 255, 0.50);
-  box-shadow: inset 0 1px 0 var(--bp-hairline);
-  color: var(--bp-text);
-}
-
-.input:focus,
-.form input:focus,
-.form textarea:focus,
-.addEmojiForm input:focus {
-  border: 0;
-  box-shadow:
-    inset 0 1px 0 var(--bp-hairline),
-    0 0 0 5px rgba(255, 123, 199, 0.14);
-}
-
-.status,
-.statusMessage,
-.header p,
-.card p,
-.section p {
-  color: var(--bp-muted);
-}
-
-@media (prefers-color-scheme: dark) {
-  .page {
-    --bp-text: #f3ffff;
-    --bp-text-soft: rgba(237, 255, 255, 0.84);
-    --bp-muted: rgba(174, 220, 225, 0.68);
-    --bp-glass: rgba(4, 35, 52, 0.48);
-    --bp-glass-strong: rgba(5, 48, 68, 0.70);
-    --bp-glass-hover: rgba(255, 255, 255, 0.075);
-    --bp-hairline: rgba(255, 255, 255, 0.08);
-    background:
-      radial-gradient(circle at 12% 7%, rgba(0, 232, 242, 0.20), transparent 34%),
-      radial-gradient(circle at 78% 3%, rgba(255, 79, 172, 0.32), transparent 31%),
-      radial-gradient(circle at 92% 70%, rgba(255, 119, 176, 0.16), transparent 36%),
-      linear-gradient(145deg, #032737 0%, #071b2e 48%, #251020 100%);
+  .saveButton,
+  .secondaryButton,
+  .addEmojiForm button,
+  .customEmojiForm button,
+  .roleForm button,
+  .fileButton {
+    width: 100%;
   }
 
-  .page::before {
-    opacity: 0.16;
-    mix-blend-mode: soft-light;
-  }
-
-  .card,
-  .profileCard,
-  .settingsCard,
-  .previewCard,
-  .server {
-    box-shadow:
-      0 30px 90px rgba(0, 0, 0, 0.36),
-      inset 0 1px 0 var(--bp-hairline);
-  }
-
-  .input,
-  .form input,
-  .form textarea,
-  .addEmojiForm input {
-    background: rgba(255, 255, 255, 0.07);
-    color: var(--bp-text);
+  .dangerButton {
+    width: 100%;
   }
 }

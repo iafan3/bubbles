@@ -2,24 +2,33 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: #f4f4f5;
-  font-family: Arial, sans-serif;
+  padding: 24px;
+  color: var(--app-text);
+  font-family: var(--font-ui);
+  background: transparent;
 }
 
 .card {
   width: min(420px, calc(100vw - 32px));
   padding: 24px;
-  border-radius: 16px;
-  background: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 88%, transparent);
+  box-shadow: var(--app-shadow-pixel);
+  backdrop-filter: blur(5px);
 }
 
 .card h1 {
   margin: 0 0 8px;
+  color: var(--app-text);
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: 0;
 }
 
 .card p {
-  color: #555;
+  margin: 0;
+  color: var(--app-text-muted);
 }
 
 .input {
@@ -27,156 +36,63 @@
   box-sizing: border-box;
   margin-top: 12px;
   padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-surface) 84%, transparent);
+  color: var(--app-text);
   font-size: 16px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-surface-3) 44%, transparent);
+}
+
+.input::placeholder {
+  color: var(--app-text-muted);
 }
 
 .buttons {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  gap: 12px;
   margin-top: 16px;
 }
 
 .buttons button {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  background: #111;
-  color: white;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-accent);
+  color: #fffaf2;
   cursor: pointer;
+  font-weight: 760;
+  box-shadow: var(--app-shadow-small);
+  transition:
+    background 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.buttons button:nth-child(2) {
+  background: color-mix(in srgb, var(--app-surface) 86%, transparent);
+  color: var(--app-text);
+}
+
+.buttons button:hover {
+  transform: translate(-1px, -1px);
+  background: var(--app-accent-strong);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--app-text) 10%, transparent);
+}
+
+.buttons button:nth-child(2):hover {
+  background: var(--app-accent-soft);
+  color: var(--app-text);
+}
+
+.buttons button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
 }
 
 .status {
   margin-top: 16px;
-}
-
-/* Bubble Pop v4 theme polish: CSS-module safe */
-.page {
-  --bp-text: #153845;
-  --bp-text-soft: #3b6572;
-  --bp-muted: rgba(43, 82, 96, 0.66);
-  --bp-glass: rgba(255, 255, 255, 0.56);
-  --bp-glass-strong: rgba(255, 255, 255, 0.74);
-  --bp-glass-hover: rgba(255, 255, 255, 0.66);
-  --bp-hairline: rgba(255, 255, 255, 0.34);
-  --bp-aqua: #78f3ef;
-  --bp-pink: #ff7bc7;
-  --bp-pink-strong: #ff4fac;
-  --bp-danger: #ff4f8f;
-
-  color: var(--bp-text);
-  background:
-    radial-gradient(circle at 12% 8%, rgba(112, 245, 241, 0.30), transparent 35%),
-    radial-gradient(circle at 78% 3%, rgba(255, 123, 190, 0.34), transparent 32%),
-    radial-gradient(circle at 92% 70%, rgba(255, 189, 215, 0.20), transparent 36%),
-    linear-gradient(145deg, #efffff 0%, #fbf3ff 48%, #ffeaf5 100%);
-  font-family: var(--bp-font);
-}
-
-.page::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.12;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.58'/%3E%3C/svg%3E");
-}
-
-.card,
-.profileCard,
-.settingsCard,
-.previewCard,
-.server {
-  border: 0;
-  background: var(--bp-glass);
-  box-shadow:
-    0 30px 90px rgba(255, 111, 181, 0.18),
-    inset 0 1px 0 var(--bp-hairline);
-  backdrop-filter: blur(30px) saturate(1.25);
-}
-
-.header button,
-.cardHeader a,
-.buttons button,
-.card button,
-.button,
-.form button,
-.addEmojiForm button,
-.saveButton {
-  border: 0;
-  background: linear-gradient(135deg, var(--bp-pink), var(--bp-aqua));
-  color: #2b1025;
-  box-shadow: 0 18px 42px rgba(255, 123, 199, 0.24);
-  font-weight: 850;
-}
-
-.input,
-.form input,
-.form textarea,
-.addEmojiForm input {
-  border: 0;
-  background: rgba(255, 255, 255, 0.50);
-  box-shadow: inset 0 1px 0 var(--bp-hairline);
-  color: var(--bp-text);
-}
-
-.input:focus,
-.form input:focus,
-.form textarea:focus,
-.addEmojiForm input:focus {
-  border: 0;
-  box-shadow:
-    inset 0 1px 0 var(--bp-hairline),
-    0 0 0 5px rgba(255, 123, 199, 0.14);
-}
-
-.status,
-.statusMessage,
-.header p,
-.card p,
-.section p {
-  color: var(--bp-muted);
-}
-
-@media (prefers-color-scheme: dark) {
-  .page {
-    --bp-text: #f3ffff;
-    --bp-text-soft: rgba(237, 255, 255, 0.84);
-    --bp-muted: rgba(174, 220, 225, 0.68);
-    --bp-glass: rgba(4, 35, 52, 0.48);
-    --bp-glass-strong: rgba(5, 48, 68, 0.70);
-    --bp-glass-hover: rgba(255, 255, 255, 0.075);
-    --bp-hairline: rgba(255, 255, 255, 0.08);
-    background:
-      radial-gradient(circle at 12% 7%, rgba(0, 232, 242, 0.20), transparent 34%),
-      radial-gradient(circle at 78% 3%, rgba(255, 79, 172, 0.32), transparent 31%),
-      radial-gradient(circle at 92% 70%, rgba(255, 119, 176, 0.16), transparent 36%),
-      linear-gradient(145deg, #032737 0%, #071b2e 48%, #251020 100%);
-  }
-
-  .page::before {
-    opacity: 0.16;
-    mix-blend-mode: soft-light;
-  }
-
-  .card,
-  .profileCard,
-  .settingsCard,
-  .previewCard,
-  .server {
-    box-shadow:
-      0 30px 90px rgba(0, 0, 0, 0.36),
-      inset 0 1px 0 var(--bp-hairline);
-  }
-
-  .input,
-  .form input,
-  .form textarea,
-  .addEmojiForm input {
-    background: rgba(255, 255, 255, 0.07);
-    color: var(--bp-text);
-  }
+  color: var(--app-text-muted);
 }

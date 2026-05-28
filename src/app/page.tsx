@@ -9,6 +9,7 @@ type Server = {
   id: string;
   name: string;
   owner_id: string;
+  avatar_url: string | null;
 };
 
 type Channel = {
@@ -59,6 +60,7 @@ export default function HomePage() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [unreadByChannelId, setUnreadByChannelId] = useState<UnreadMap>({});
   const [status, setStatus] = useState("Loading...");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -82,6 +84,7 @@ export default function HomePage() {
 
       if (membershipError) {
         setStatus(membershipError.message);
+        setIsLoading(false);
         return;
       }
 
@@ -91,18 +94,21 @@ export default function HomePage() {
       if (serverIds.length === 0) {
         setServers([]);
         setChannels([]);
-        setStatus("You are not in any servers yet.");
+        window.sessionStorage.removeItem("bubbles-channels");
+        setStatus("");
+        setIsLoading(false);
         return;
       }
 
       const { data: serverData, error: serverError } = await supabase
         .from("servers")
-        .select("id, name, owner_id")
+        .select("id, name, owner_id, avatar_url")
         .in("id", serverIds)
         .order("created_at", { ascending: true });
 
       if (serverError) {
         setStatus(serverError.message);
+        setIsLoading(false);
         return;
       }
 
@@ -114,6 +120,7 @@ export default function HomePage() {
 
       if (channelError) {
         setStatus(channelError.message);
+        setIsLoading(false);
         return;
       }
 
@@ -126,6 +133,7 @@ export default function HomePage() {
         JSON.stringify(nextChannels)
       );
       setStatus("");
+      setIsLoading(false);
     }
 
     loadDashboard();
@@ -146,39 +154,6 @@ export default function HomePage() {
   async function logout() {
     await supabase.auth.signOut();
     window.location.href = "/login";
-  }
-
-  async function deleteServer(serverId: string, serverName: string) {
-    const confirmed = window.confirm(
-      `Delete "${serverName}"? This will permanently delete its channels and messages.`
-    );
-
-    if (!confirmed) return;
-
-    setStatus("");
-
-    const { error } = await supabase
-      .from("servers")
-      .delete()
-      .eq("id", serverId)
-      .eq("owner_id", currentUserId);
-
-    if (error) {
-      setStatus(error.message);
-      return;
-    }
-
-    const updatedServers = servers.filter((server) => server.id !== serverId);
-    const updatedChannels = channels.filter(
-      (channel) => channel.server_id !== serverId
-    );
-
-    setServers(updatedServers);
-    setChannels(updatedChannels);
-
-    if (updatedServers.length === 0) {
-      setStatus("You are not in any servers yet.");
-    }
   }
 
   function getServerChannels(serverId: string) {
@@ -223,19 +198,45 @@ export default function HomePage() {
           <div>
             <h2>Your servers</h2>
             <p className={styles.cardSubtext}>
-              Pick a server to enter your first channel.
+              {servers.length > 0
+                ? "Pick a server to enter your first channel."
+                : "Servers you join will appear here."}
             </p>
           </div>
 
           <Link href="/setup">Create server</Link>
         </div>
 
-        {status && <p className={styles.status}>{status}</p>}
+        {status && !isLoading && <p className={styles.status}>{status}</p>}
 
         <div className={styles.serverList}>
-          {servers.map((server) => {
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, index) => (
+                <section
+                  className={`${styles.server} ${styles.skeletonServer}`}
+                  key={`server-skeleton-${index}`}
+                  aria-hidden="true"
+                >
+                  <div className={styles.serverMainLink}>
+                    <span
+                      className={`${styles.serverIcon} ${styles.skeletonBlock}`}
+                    />
+                    <span className={styles.serverText}>
+                      <span
+                        className={`${styles.skeletonLine} ${styles.skeletonLineTitle}`}
+                      />
+                      <span
+                        className={`${styles.skeletonLine} ${styles.skeletonLineMeta}`}
+                      />
+                    </span>
+                    <span
+                      className={`${styles.serverArrow} ${styles.skeletonBlock}`}
+                    />
+                  </div>
+                </section>
+              ))
+            : servers.map((server) => {
             const firstChannel = getFirstChannel(server.id);
-            const isOwner = server.owner_id === currentUserId;
             const unreadCount = getServerUnreadCount(server.id);
 
             return (
@@ -246,19 +247,22 @@ export default function HomePage() {
                     href={`/channels/${firstChannel.id}`}
                   >
                     <span className={styles.serverIcon} aria-hidden="true">
-                      {server.name.charAt(0).toUpperCase() || "B"}
+                      {server.avatar_url ? (
+                        <img src={server.avatar_url} alt="" />
+                      ) : (
+                        server.name.charAt(0).toUpperCase() || "B"
+                      )}
                     </span>
 
-                    <span className={styles.serverText}>
-                      <h3>{server.name}</h3>
+                      <span className={styles.serverText}>
+                        <h3>{server.name}</h3>
 
-                      <span className={styles.serverMeta}>
-                        {isOwner && (
-                          <span className={styles.ownerBadge}>Owner</span>
-                        )}
-                        <span>Enter server</span>
+                        <span className={styles.serverMeta}>
+                          {server.owner_id === currentUserId && (
+                            <span className={styles.ownerBadge}>Owner</span>
+                          )}
+                        </span>
                       </span>
-                    </span>
 
                     {unreadCount > 0 && (
                       <span className={styles.serverUnreadBadge}>
@@ -275,37 +279,37 @@ export default function HomePage() {
                     className={`${styles.serverMainLink} ${styles.disabledServerLink}`}
                   >
                     <span className={styles.serverIcon} aria-hidden="true">
-                      {server.name.charAt(0).toUpperCase() || "B"}
+                      {server.avatar_url ? (
+                        <img src={server.avatar_url} alt="" />
+                      ) : (
+                        server.name.charAt(0).toUpperCase() || "B"
+                      )}
                     </span>
 
-                    <span className={styles.serverText}>
-                      <h3>{server.name}</h3>
+                      <span className={styles.serverText}>
+                        <h3>{server.name}</h3>
 
-                      <span className={styles.serverMeta}>
-                        {isOwner && (
-                          <span className={styles.ownerBadge}>Owner</span>
-                        )}
-                        <span>No channels yet</span>
+                        <span className={styles.serverMeta}>
+                          {server.owner_id === currentUserId && (
+                            <span className={styles.ownerBadge}>Owner</span>
+                          )}
+                          <span>No channels yet</span>
+                        </span>
                       </span>
-                    </span>
-                  </div>
-                )}
-
-                {isOwner && (
-                  <button
-                    className={styles.deleteButton}
-                    type="button"
-                    onClick={() => deleteServer(server.id, server.name)}
-                  >
-                    Delete
-                  </button>
-                )}
+                    </div>
+                  )}
               </section>
             );
           })}
 
-          {!status && servers.length === 0 && (
-            <p className={styles.empty}>No servers yet. Create one to start.</p>
+          {!isLoading && !status && servers.length === 0 && (
+            <div className={styles.emptyState}>
+              <h3>No servers yet</h3>
+              <p>
+                You can stay here without creating anything. Open an invite link
+                to join a server, or create one when you want your own space.
+              </p>
+            </div>
           )}
         </div>
       </section>

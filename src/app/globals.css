@@ -1,17 +1,193 @@
+@font-face {
+  font-family: "Anthropic Serif";
+  src: url("/fonts/AnthropicSerif-Roman-Web.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-ui: "Anthropic Serif", "AnthropicSerif", "Anthropic",
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-display: "Anthropic Serif", "AnthropicSerif", "Anthropic", ui-serif,
+    Georgia, "Times New Roman", serif;
+
+  --app-bg: #f4efe7;
+  --app-surface: #fbf7ef;
+  --app-surface-2: #eee5d8;
+  --app-surface-3: #e4d7c6;
+  --app-text: #251c16;
+  --app-text-soft: #5f5147;
+  --app-text-muted: #8a7a6d;
+  --app-border: #d8cbbb;
+  --app-accent: #b45f3a;
+  --app-accent-strong: #7d3f25;
+  --app-accent-2: #d6a36b;
+  --app-accent-2-strong: #9b6836;
+  --app-accent-soft: #efe0d2;
+  --app-accent-2-soft: #f5eadc;
+  --app-danger: #9f3f35;
+  --app-danger-soft: rgba(159, 63, 53, 0.14);
+  --app-shadow-pixel: 4px 4px 0 color-mix(in srgb, var(--app-text) 10%, transparent);
+  --app-shadow-small: 2px 2px 0 color-mix(in srgb, var(--app-text) 8%, transparent);
+  --app-grain-opacity: 0.34;
+  --app-pixel-opacity: 0.22;
+  --background: var(--app-bg);
+  --foreground: var(--app-text);
+}
+
+html[data-bubbles-theme="claude-light"],
+body[data-bubbles-theme="claude-light"] {
+  --app-bg: #f4efe7;
+  --app-surface: #fbf7ef;
+  --app-surface-2: #eee5d8;
+  --app-surface-3: #e4d7c6;
+  --app-text: #251c16;
+  --app-text-soft: #5f5147;
+  --app-text-muted: #8a7a6d;
+  --app-border: #d8cbbb;
+  --app-accent: #b45f3a;
+  --app-accent-strong: #7d3f25;
+  --app-accent-2: #d6a36b;
+  --app-accent-2-strong: #9b6836;
+  --app-accent-soft: #efe0d2;
+  --app-accent-2-soft: #f5eadc;
+  --app-grain-opacity: 0.34;
+  --app-pixel-opacity: 0.22;
+}
+
+html[data-bubbles-theme="claude-dark"],
+body[data-bubbles-theme="claude-dark"] {
+  --app-bg: #211d19;
+  --app-surface: #2b251f;
+  --app-surface-2: #352d26;
+  --app-surface-3: #44382f;
+  --app-text: #f6eee4;
+  --app-text-soft: #d7c9bb;
+  --app-text-muted: #aa9a8a;
+  --app-border: #514338;
+  --app-accent: #d68b63;
+  --app-accent-strong: #f0b08b;
+  --app-accent-2: #caa36f;
+  --app-accent-2-strong: #e8c386;
+  --app-accent-soft: #493226;
+  --app-accent-2-soft: #443829;
+  --app-danger: #ef8f82;
+  --app-danger-soft: rgba(239, 143, 130, 0.16);
+  --app-grain-opacity: 0.24;
+  --app-pixel-opacity: 0.2;
+}
+
+html[data-bubbles-theme="sage-light"],
+body[data-bubbles-theme="sage-light"] {
+  --app-bg: #ede9df;
+  --app-surface: #faf7ee;
+  --app-surface-2: #e1ddcf;
+  --app-surface-3: #d4cdbd;
+  --app-text: #1c1f1a;
+  --app-text-soft: #4e544b;
+  --app-text-muted: #798071;
+  --app-border: #cbc6b7;
+  --app-accent: #2f6f58;
+  --app-accent-strong: #1f4d3d;
+  --app-accent-2: #b58a42;
+  --app-accent-2-strong: #7a5a27;
+  --app-accent-soft: #dce9df;
+  --app-accent-2-soft: #efe4ca;
+  --app-grain-opacity: 0.28;
+  --app-pixel-opacity: 0.18;
+}
+
+html[data-bubbles-theme="sage-dark"],
+body[data-bubbles-theme="sage-dark"] {
+  --app-bg: #1b201b;
+  --app-surface: #242a23;
+  --app-surface-2: #2f362d;
+  --app-surface-3: #3a4237;
+  --app-text: #edf2e8;
+  --app-text-soft: #cbd6c5;
+  --app-text-muted: #9da995;
+  --app-border: #465140;
+  --app-accent: #78a987;
+  --app-accent-strong: #a6d0b0;
+  --app-accent-2: #c0a05f;
+  --app-accent-2-strong: #e0c177;
+  --app-accent-soft: #2f4435;
+  --app-accent-2-soft: #423923;
+  --app-danger: #ef8f82;
+  --app-danger-soft: rgba(239, 143, 130, 0.16);
+  --app-grain-opacity: 0.22;
+  --app-pixel-opacity: 0.18;
+}
+
+html[data-bubbles-theme="lavender-light"],
+body[data-bubbles-theme="lavender-light"] {
+  --app-bg: #f0ecef;
+  --app-surface: #fbf7fa;
+  --app-surface-2: #e4dce3;
+  --app-surface-3: #d5c9d2;
+  --app-text: #241b25;
+  --app-text-soft: #584c58;
+  --app-text-muted: #80737e;
+  --app-border: #d2c5cf;
+  --app-accent: #805f8d;
+  --app-accent-strong: #563f61;
+  --app-accent-2: #b07a69;
+  --app-accent-2-strong: #7b5045;
+  --app-accent-soft: #e6d9ea;
+  --app-accent-2-soft: #efdfda;
+  --app-grain-opacity: 0.32;
+  --app-pixel-opacity: 0.18;
+}
+
+html[data-bubbles-theme="lavender-dark"],
+body[data-bubbles-theme="lavender-dark"] {
+  --app-bg: #211b23;
+  --app-surface: #2b2430;
+  --app-surface-2: #352d3b;
+  --app-surface-3: #42364a;
+  --app-text: #f2eaf3;
+  --app-text-soft: #d6c7d8;
+  --app-text-muted: #a998ad;
+  --app-border: #51445a;
+  --app-accent: #b994c7;
+  --app-accent-strong: #d6b4e2;
+  --app-accent-2: #c08d78;
+  --app-accent-2-strong: #ddb09f;
+  --app-accent-soft: #413046;
+  --app-accent-2-soft: #463229;
+  --app-danger: #ef8f82;
+  --app-danger-soft: rgba(239, 143, 130, 0.16);
+  --app-grain-opacity: 0.24;
+  --app-pixel-opacity: 0.18;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-bubbles-theme]) {
+    --app-bg: #211d19;
+    --app-surface: #2b251f;
+    --app-surface-2: #352d26;
+    --app-surface-3: #44382f;
+    --app-text: #f6eee4;
+    --app-text-soft: #d7c9bb;
+    --app-text-muted: #aa9a8a;
+    --app-border: #514338;
+    --app-accent: #d68b63;
+    --app-accent-strong: #f0b08b;
+    --app-accent-2: #caa36f;
+    --app-accent-2-strong: #e8c386;
+    --app-accent-soft: #493226;
+    --app-accent-2-soft: #443829;
+    --app-danger: #ef8f82;
+    --app-danger-soft: rgba(239, 143, 130, 0.16);
+    --app-grain-opacity: 0.24;
+    --app-pixel-opacity: 0.2;
   }
 }
 
 html {
-  height: 100%;
+  min-height: 100%;
 }
 
 html,
@@ -24,11 +200,58 @@ body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--app-text);
+  background-color: var(--app-bg);
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--app-text) 6%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      color-mix(in srgb, var(--app-text) 6%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      transparent 23px,
+      color-mix(in srgb, var(--app-surface-3) 34%, transparent) 23px,
+      color-mix(in srgb, var(--app-surface-3) 34%, transparent) 24px
+    ),
+    linear-gradient(
+      transparent 23px,
+      color-mix(in srgb, var(--app-surface-3) 34%, transparent) 23px,
+      color-mix(in srgb, var(--app-surface-3) 34%, transparent) 24px
+    );
+  background-position: center;
+  background-size: 24px 24px, 24px 24px, 96px 96px, 96px 96px;
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+body::before {
+  display: none;
+}
+
+body::after {
+  z-index: 0;
+  opacity: var(--app-grain-opacity);
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.52'/%3E%3C/svg%3E");
+}
+
+html[data-bubbles-resolved-mode="dark"] body::after,
+body[data-bubbles-resolved-mode="dark"]::after {
+  mix-blend-mode: soft-light;
 }
 
 * {
@@ -42,82 +265,253 @@ a {
   text-decoration: none;
 }
 
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__page"]
+) {
+  color: var(--app-text) !important;
+  background: transparent !important;
+  font-family: var(--font-ui) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__profileCard"],
+  [class*="__settingsCard"],
+  [class*="__previewCard"],
+  [class*="__messageContextMenu"],
+  [class*="__reactionMenu"]
+) {
+  border-color: var(--app-border) !important;
+  background: color-mix(in srgb, var(--app-surface) 88%, transparent) !important;
+  box-shadow: var(--app-shadow-pixel) !important;
+  backdrop-filter: blur(4px);
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__sidebar"],
+  [class*="__membersPanel"],
+  [class*="__channels"],
+  [class*="__chat"],
+  [class*="__messages"],
+  [class*="__currentUserBar"],
+  [class*="__voiceCallPanel"]
+) {
+  border-color: var(--app-border) !important;
+  background: color-mix(in srgb, var(--app-surface-2) 86%, transparent) !important;
+  color: var(--app-text) !important;
+  backdrop-filter: blur(3px);
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__channelRow"],
+  [class*="__channelLink"],
+  [class*="__voiceChannelButton"],
+  [class*="__emojiItem"],
+  [class*="__customEmojiItem"],
+  [class*="__uploadBox"],
+  [class*="__profileSection"]
+) {
+  border-color: var(--app-border) !important;
+  background: color-mix(in srgb, var(--app-surface) 72%, transparent) !important;
+  color: var(--app-text-soft) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__activeChannelRow"],
+  [class*="__activeVoiceChannelRow"],
+  [class*="__activeReactionPill"],
+  [class*="__channel"][class*="active"]
+) {
+  background: var(--app-accent-soft) !important;
+  color: var(--app-text) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  h1,
+  h2,
+  h3,
+  strong,
+  [class*="__title"]
+) {
+  color: var(--app-text) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__status"],
+  [class*="__statusMessage"],
+  [class*="__cardSubtext"],
+  [class*="__serverMeta"],
+  [class*="__messageMeta"],
+  [class*="__empty"]
+) {
+  color: var(--app-text-muted) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__button"],
+  [class*="__saveButton"],
+  [class*="__inviteButton"],
+  [class*="__attachButton"],
+  [class*="__themeButton"],
+  [class*="__notificationButton"],
+  [class*="__addChannelButton"],
+  [class*="__messageActionButton"]
+) {
+  border-color: var(--app-border) !important;
+  background: var(--app-accent) !important;
+  color: #fffaf2 !important;
+  box-shadow: var(--app-shadow-small) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__button"]:hover,
+  [class*="__saveButton"]:hover,
+  [class*="__inviteButton"]:hover,
+  [class*="__attachButton"]:hover,
+  [class*="__themeButton"]:hover,
+  [class*="__notificationButton"]:hover
+) {
+  background: var(--app-accent-strong) !important;
+  color: #fffaf2 !important;
+  filter: none !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__secondaryButton"],
+  [class*="__fileButton"],
+  [class*="__reactionPill"],
+  [class*="__messageMoreMenu"] button,
+  [class*="__reactionPicker"] button
+) {
+  border-color: var(--app-border) !important;
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  input,
+  textarea,
+  select,
+  [class*="__input"]
+) {
+  border-color: var(--app-border) !important;
+  background: color-mix(in srgb, var(--app-surface) 84%, transparent) !important;
+  color: var(--app-text) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-surface-3) 44%, transparent) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(input, textarea, select)::placeholder {
+  color: var(--app-text-muted) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__messageAvatar"],
+  [class*="__avatarFallback"],
+  [class*="__unreadBadge"],
+  [class*="__statusPill"]
+) {
+  background: var(--app-accent-soft) !important;
+  color: var(--app-accent-strong) !important;
+  box-shadow: var(--app-shadow-small) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__deleteButton"],
+  [class*="__dangerContextButton"]
+) {
+  background: var(--app-danger-soft) !important;
+  color: var(--app-danger) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__banner"]
+) {
+  background-color: var(--app-accent-soft) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) [data-theme] {
+  --bg: var(--app-bg) !important;
+  --bg-soft: var(--app-surface-2) !important;
+  --bg-softer: var(--app-surface-3) !important;
+  --surface: var(--app-surface) !important;
+  --surface-raised: var(--app-surface) !important;
+  --surface-hover: var(--app-accent-soft) !important;
+  --border: var(--app-border) !important;
+  --border-strong: color-mix(in srgb, var(--app-border) 72%, var(--app-text)) !important;
+  --text: var(--app-text) !important;
+  --text-soft: var(--app-text-soft) !important;
+  --text-muted: var(--app-text-muted) !important;
+  --text-faint: var(--app-text-muted) !important;
+  --accent: var(--app-accent) !important;
+  --accent-strong: var(--app-accent-strong) !important;
+  --accent-soft: var(--app-accent-soft) !important;
+  --danger: var(--app-danger) !important;
+  --danger-bg: var(--app-danger-soft) !important;
+  --input-bg: color-mix(in srgb, var(--app-surface) 84%, transparent) !important;
+  --sidebar-bg: var(--app-surface-2) !important;
+  --chat-bg: var(--app-bg) !important;
+  --members-bg: var(--app-surface-2) !important;
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(
+  [class*="__page"],
+  [class*="__settingsCard"],
+  [class*="__previewCard"]
+) {
+  animation: appTileIn 320ms cubic-bezier(0.18, 1.35, 0.22, 1);
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(button, a[href]) {
+  transition:
+    transform 180ms cubic-bezier(0.2, 1.4, 0.22, 1),
+    background-color 180ms steps(4, end),
+    color 180ms steps(4, end),
+    box-shadow 180ms cubic-bezier(0.2, 1.1, 0.22, 1);
+}
+
+:is(html[data-bubbles-theme], body[data-bubbles-theme]) :is(button, a[href]):active {
+  transform: translate(1px, 1px) scale(0.985);
+}
+
+@keyframes appTileIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+
+  62% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.006);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
   }
-}
-
-/* Bubble Pop v4 global polish */
-:root {
-  --bp-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
-
-  --bp-aqua: #78f3ef;
-  --bp-aqua-strong: #00e8f2;
-  --bp-pink: #ff7bc7;
-  --bp-pink-strong: #ff4fac;
-  --bp-ink: #153845;
-  --bp-glass-light: rgba(255, 255, 255, 0.56);
-  --bp-glass-dark: rgba(4, 35, 52, 0.5);
-
-  --background: #efffff;
-  --foreground: #153845;
-}
-
-body {
-  font-family: var(--bp-font);
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 12% 8%, rgba(112, 245, 241, 0.30), transparent 35%),
-    radial-gradient(circle at 78% 3%, rgba(255, 123, 190, 0.34), transparent 32%),
-    radial-gradient(circle at 92% 70%, rgba(255, 189, 215, 0.20), transparent 36%),
-    radial-gradient(circle at 30% 106%, rgba(160, 255, 225, 0.20), transparent 34%),
-    linear-gradient(145deg, #efffff 0%, #fbf3ff 48%, #ffeaf5 100%);
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.12;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.58'/%3E%3C/svg%3E");
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #032737;
-    --foreground: #f3ffff;
-  }
-
-  body::before {
-    background:
-      radial-gradient(circle at 12% 7%, rgba(0, 232, 242, 0.20), transparent 34%),
-      radial-gradient(circle at 78% 3%, rgba(255, 79, 172, 0.32), transparent 31%),
-      radial-gradient(circle at 92% 70%, rgba(255, 119, 176, 0.16), transparent 36%),
-      radial-gradient(circle at 34% 104%, rgba(115, 255, 209, 0.10), transparent 38%),
-      linear-gradient(145deg, #032737 0%, #071b2e 48%, #251020 100%);
-  }
-
-  body::after {
-    opacity: 0.16;
-    mix-blend-mode: soft-light;
-  }
-}
-
-
-/* Bubble Pop v5: remove global gradient feel */
-:root {
-  --bp-pink: #ff7bc7;
-  --bp-aqua: #78f3ef;
 }

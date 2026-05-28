@@ -10,17 +10,46 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function validateCredentials() {
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail || !password) {
+      setStatus("Enter your email and password first.");
+      return null;
+    }
+
+    if (password.length < 6) {
+      setStatus("Password must be at least 6 characters.");
+      return null;
+    }
+
+    return { email: cleanEmail, password };
+  }
+
+  function getAuthMessage(message: string) {
+    if (message.toLowerCase().includes("anonymous")) {
+      return "Enter your email and password first.";
+    }
+
+    return message;
+  }
 
   async function signUp() {
     setStatus("");
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    const credentials = validateCredentials();
+    if (!credentials) return;
+
+    setIsSubmitting(true);
+
+    const { error } = await supabase.auth.signUp(credentials);
+
+    setIsSubmitting(false);
 
     if (error) {
-      setStatus(error.message);
+      setStatus(getAuthMessage(error.message));
       return;
     }
 
@@ -30,17 +59,21 @@ export default function LoginPage() {
   async function signIn() {
     setStatus("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const credentials = validateCredentials();
+    if (!credentials) return;
+
+    setIsSubmitting(true);
+
+    const { error } = await supabase.auth.signInWithPassword(credentials);
+
+    setIsSubmitting(false);
 
     if (error) {
-      setStatus(error.message);
+      setStatus(getAuthMessage(error.message));
       return;
     }
 
-    window.location.href = "/setup";
+    window.location.href = "/";
   }
 
   return (
@@ -54,6 +87,8 @@ export default function LoginPage() {
           type="email"
           placeholder="Email"
           value={email}
+          autoComplete="email"
+          required
           onChange={(event) => setEmail(event.target.value)}
         />
 
@@ -62,12 +97,18 @@ export default function LoginPage() {
           type="password"
           placeholder="Password"
           value={password}
+          autoComplete="current-password"
+          required
           onChange={(event) => setPassword(event.target.value)}
         />
 
         <div className={styles.buttons}>
-          <button onClick={signIn}>Sign in</button>
-          <button onClick={signUp}>Sign up</button>
+          <button type="button" onClick={signIn} disabled={isSubmitting}>
+            {isSubmitting ? "Working..." : "Sign in"}
+          </button>
+          <button type="button" onClick={signUp} disabled={isSubmitting}>
+            Sign up
+          </button>
         </div>
 
         {status && <p className={styles.status}>{status}</p>}
